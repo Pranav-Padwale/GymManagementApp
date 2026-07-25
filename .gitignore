@@ -1,0 +1,38 @@
+# Gradle build files & directories
+.gradle/
+build/
+*/build/
+.gradletasknamecache
+
+# Local configuration file (contains local paths, SDK locations, etc.)
+local.properties
+
+# IntelliJ IDEA / Android Studio project files
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+.navigation/
+
+# Eclipse project files
+.classpath
+.project
+.settings/
+
+# NetBeans
+nbproject/
+private/
+
+# Kotlin / KMP temporary files
+.kotlin/
+kotlin-js-store/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+# Log files
+*.log
