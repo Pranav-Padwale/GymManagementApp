@@ -6,16 +6,19 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import com.gym.controller.activity.ActivityController
+import com.gym.controller.diet.DietPlanController
 import com.gym.controller.drawer.DrawerController
 import com.gym.controller.finance.FinanceController
 import com.gym.controller.goal.GoalController
 import com.gym.controller.member.MemberManagementController
 import com.gym.model.activity.ActivityRepositoryImpl
+import com.gym.model.diet.DietPlanRepositoryImpl
 import com.gym.model.drawer.DrawerRepositoryImpl
 import com.gym.model.finance.FinancialRepositoryImpl
 import com.gym.model.goal.GoalRepositoryImpl
 import com.gym.model.member.MemberRepositoryImpl
 import com.gym.view.activity.ActivityDashboardScreen
+import com.gym.view.diet.DietPlanScreen
 import com.gym.view.drawer.HamburgerSideDrawer
 import com.gym.view.finance.FinanceDashboardScreen
 import com.gym.view.goal.EditGoalScreen
@@ -25,13 +28,14 @@ import com.gym.view.theme.GymTheme
 
 /**
  * Main Application Entry Point binding Model, Controller, and View components.
- * Supports navigation between Fitness Activity, Edit Goal, Member Status, and Balance Sheet.
+ * Supports navigation between Fitness Activity, Diet Plan, Edit Goal, Member Status, and Balance Sheet.
  */
 @Composable
 fun App() {
     // Model Initialization
     val drawerRepository = remember { DrawerRepositoryImpl() }
     val activityRepository = remember { ActivityRepositoryImpl() }
+    val dietPlanRepository = remember { DietPlanRepositoryImpl() }
     val goalRepository = remember { GoalRepositoryImpl() }
     val memberRepository = remember { MemberRepositoryImpl() }
     val financialRepository = remember { FinancialRepositoryImpl() }
@@ -39,6 +43,7 @@ fun App() {
     // Controller Initialization (Standard Kotlin Controllers)
     val drawerController = remember { DrawerController(repository = drawerRepository) }
     val activityController = remember { ActivityController(repository = activityRepository) }
+    val dietPlanController = remember { DietPlanController(repository = dietPlanRepository) }
     val goalController = remember { GoalController(repository = goalRepository) }
     val memberController = remember { MemberManagementController(repository = memberRepository) }
     val financeController = remember { FinanceController(repository = financialRepository) }
@@ -46,6 +51,7 @@ fun App() {
     // State Collectors
     val drawerState by drawerController.uiState.collectAsState()
     val activityState by activityController.uiState.collectAsState()
+    val dietPlanState by dietPlanController.uiState.collectAsState()
     val goalState by goalController.uiState.collectAsState()
     val memberState by memberController.uiState.collectAsState()
     val financeState by financeController.uiState.collectAsState()
@@ -91,11 +97,31 @@ fun App() {
                                 activityController.onToggleSeries(showCal, showEaten, showBurn)
                             },
                             onBottomTabSelected = { tabName ->
-                                if (tabName == "Goal") {
-                                    drawerController.onMenuItemClicked("edit_goal", "Edit Goal")
-                                } else {
-                                    activityController.onBottomTabSelected(tabName)
+                                when (tabName) {
+                                    "Goal" -> drawerController.onMenuItemClicked("edit_goal", "Edit Goal")
+                                    "Diet Plan" -> drawerController.onMenuItemClicked("diet_plan", "Diet Plan")
+                                    else -> activityController.onBottomTabSelected(tabName)
                                 }
+                            }
+                        )
+                    }
+                    "diet_plan" -> {
+                        DietPlanScreen(
+                            state = dietPlanState,
+                            onNavigateBack = {
+                                drawerController.onMenuItemClicked("fitness_activity", "Fitness Activity")
+                            },
+                            onTrainerSelected = { trainerName ->
+                                dietPlanController.onTrainerSelected(trainerName)
+                            },
+                            onToggleTrainerDropdown = { expanded ->
+                                dietPlanController.onToggleTrainerDropdown(expanded)
+                            },
+                            onCameraIconClicked = { category ->
+                                dietPlanController.onCameraIconClicked(category)
+                            },
+                            onRemoveFoodItem = { foodId ->
+                                dietPlanController.onRemoveFoodItem(foodId)
                             }
                         )
                     }
@@ -203,10 +229,10 @@ fun App() {
                                 activityController.onToggleSeries(showCal, showEaten, showBurn)
                             },
                             onBottomTabSelected = { tabName ->
-                                if (tabName == "Goal") {
-                                    drawerController.onMenuItemClicked("edit_goal", "Edit Goal")
-                                } else {
-                                    activityController.onBottomTabSelected(tabName)
+                                when (tabName) {
+                                    "Goal" -> drawerController.onMenuItemClicked("edit_goal", "Edit Goal")
+                                    "Diet Plan" -> drawerController.onMenuItemClicked("diet_plan", "Diet Plan")
+                                    else -> activityController.onBottomTabSelected(tabName)
                                 }
                             }
                         )

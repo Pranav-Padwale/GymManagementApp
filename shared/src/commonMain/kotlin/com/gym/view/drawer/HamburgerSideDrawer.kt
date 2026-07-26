@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.RateReview
@@ -211,6 +212,7 @@ private fun DrawerItemRow(
 private fun getIconForMenuItem(itemId: String): ImageVector {
     return when (itemId) {
         "fitness_activity" -> Icons.Default.TrackChanges
+        "diet_plan" -> Icons.Default.LocalFireDepartment
         "member_status" -> Icons.Default.People
         "balance_sheet" -> Icons.Default.AccountBalance
         "gym_plan" -> Icons.Default.Shield
