@@ -23,6 +23,7 @@ class DrawerRepositoryImpl : DrawerRepository {
     private val menuItems = listOf(
         // Primary Core Modules
         DrawerMenuItem("fitness_activity", "Fitness Activity", "TrackChanges"),
+        DrawerMenuItem("diet_plan", "Diet Plan", "LocalFireDepartment"),
         DrawerMenuItem("member_status", "Member Status Directory", "People"),
         DrawerMenuItem("balance_sheet", "Income & Expense Sheet", "AccountBalance"),
 
