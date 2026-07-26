@@ -10,8 +10,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
@@ -34,11 +34,12 @@ import com.gym.view.theme.*
 
 /**
  * View (Passive Compose Multiplatform Screen): Income & Expense Balance Sheet Dashboard.
- * Features Hamburger Menu ☰ & Back Arrow ⬅️ navigation header.
+ * Dynamically adapts colors between Dark Mode and Light Mode.
  */
 @Composable
 fun FinanceDashboardScreen(
     state: FinanceUiState,
+    isDarkMode: Boolean = true,
     onOpenDrawer: () -> Unit,
     onNavigateBack: () -> Unit,
     onMonthRangeChanged: (month: Int, year: Int) -> Unit,
@@ -47,12 +48,13 @@ fun FinanceDashboardScreen(
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val theme = getAppThemeColors(isDarkMode)
     var isAddExpenseDialogOpen by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(GymDarkBackground)
+            .background(theme.bg)
             .padding(16.dp)
     ) {
         // Dashboard Header with Hamburger ☰ & Back Arrow ⬅️ Buttons
@@ -64,12 +66,12 @@ fun FinanceDashboardScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // Hamburger Menu Trigger
                 IconButton(onClick = onOpenDrawer, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.Menu, contentDescription = "Open Hamburger Menu", tint = GymTextPrimary)
+                    Icon(Icons.Default.Menu, contentDescription = "Open Hamburger Menu", tint = theme.textMain)
                 }
 
                 // Back Arrow Button
                 IconButton(onClick = onNavigateBack, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back to Main Dashboard", tint = GymTextPrimary)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to Main Dashboard", tint = theme.textMain)
                 }
 
                 Spacer(modifier = Modifier.width(6.dp))
@@ -79,12 +81,12 @@ fun FinanceDashboardScreen(
                         text = "Balance Sheet",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = GymTextPrimary
+                        color = theme.textMain
                     )
                     Text(
                         text = "Monthly Financial Breakdown",
                         fontSize = 12.sp,
-                        color = GymTextSecondary
+                        color = theme.textMuted
                     )
                 }
             }
@@ -94,13 +96,14 @@ fun FinanceDashboardScreen(
                 MonthYearSelectorButton(
                     selectedMonth = state.selectedMonth,
                     selectedYear = state.selectedYear,
+                    theme = theme,
                     onMonthYearSelected = onMonthRangeChanged
                 )
 
                 // Refresh Button
                 IconButton(
                     onClick = onRefresh,
-                    modifier = Modifier.clip(CircleShape).background(GymSurfaceDark)
+                    modifier = Modifier.clip(CircleShape).background(theme.cardBg)
                 ) {
                     Icon(Icons.Default.Refresh, contentDescription = "Refresh Data", tint = GymAccentPrimary)
                 }
@@ -146,7 +149,8 @@ fun FinanceDashboardScreen(
             BalanceSheetSummaryCard(
                 totalIncome = state.summary.totalIncome,
                 totalExpenses = state.summary.totalExpenses,
-                netBalance = state.summary.netBalance
+                netBalance = state.summary.netBalance,
+                theme = theme
             )
         }
 
@@ -162,7 +166,7 @@ fun FinanceDashboardScreen(
                 text = "Monthly Expense Breakdown",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = GymTextPrimary
+                color = theme.textMain
             )
 
             Button(
@@ -173,7 +177,7 @@ fun FinanceDashboardScreen(
             ) {
                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(text = "Log Expense", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text(text = "Log Expense", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
             }
         }
 
@@ -185,7 +189,7 @@ fun FinanceDashboardScreen(
             ) {
                 Text(
                     text = "No expenses recorded for this month.",
-                    color = GymTextSecondary,
+                    color = theme.textMuted,
                     fontSize = 14.sp
                 )
             }
@@ -195,7 +199,7 @@ fun FinanceDashboardScreen(
                 modifier = Modifier.weight(1f)
             ) {
                 items(state.summary.expenseBreakdown) { item ->
-                    ExpenseCategoryRow(item.category.displayName, item.totalAmount, item.percentageOfTotalExpenses)
+                    ExpenseCategoryRow(item.category.displayName, item.totalAmount, item.percentageOfTotalExpenses, theme)
                 }
 
                 item {
@@ -204,13 +208,13 @@ fun FinanceDashboardScreen(
                         text = "Recent Transactions Log",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = GymTextSecondary,
+                        color = theme.textMuted,
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
                 }
 
                 items(state.summary.transactions) { tx ->
-                    TransactionLogRow(tx.title, tx.category.displayName, tx.amount, tx.type, tx.dateIso)
+                    TransactionLogRow(tx.title, tx.category.displayName, tx.amount, tx.type, tx.dateIso, theme)
                 }
             }
         }
@@ -219,6 +223,7 @@ fun FinanceDashboardScreen(
     // Input Form Modal for Logging New Expenses
     if (isAddExpenseDialogOpen) {
         AddExpenseDialog(
+            theme = theme,
             onDismiss = { isAddExpenseDialogOpen = false },
             onSubmitExpense = { title, amount, category ->
                 onAddExpense(title, amount, category)
@@ -232,18 +237,19 @@ fun FinanceDashboardScreen(
 private fun BalanceSheetSummaryCard(
     totalIncome: Double,
     totalExpenses: Double,
-    netBalance: Double
+    netBalance: Double,
+    theme: AppThemeColors
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = GymSurfaceDark),
+        colors = CardDefaults.cardColors(containerColor = theme.cardBg),
         shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().border(1.dp, theme.cardBorder, RoundedCornerShape(16.dp))
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
                 text = "Net Monthly Balance",
                 fontSize = 12.sp,
-                color = GymTextSecondary,
+                color = theme.textMuted,
                 fontWeight = FontWeight.SemiBold
             )
             val netColor = if (netBalance >= 0) GymAccentSecondary else GymAccentDanger
@@ -255,7 +261,7 @@ private fun BalanceSheetSummaryCard(
             )
 
             Spacer(modifier = Modifier.height(16.dp))
-            HorizontalDivider(color = GymCardDark)
+            HorizontalDivider(color = theme.dividerColor)
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(
@@ -264,7 +270,7 @@ private fun BalanceSheetSummaryCard(
             ) {
                 // Total Income Column
                 Column {
-                    Text(text = "Total Income", fontSize = 12.sp, color = GymTextSecondary)
+                    Text(text = "Total Income", fontSize = 12.sp, color = theme.textMuted)
                     Text(
                         text = "+$${formatAmount(totalIncome)}",
                         fontSize = 18.sp,
@@ -275,7 +281,7 @@ private fun BalanceSheetSummaryCard(
 
                 // Total Expenses Column
                 Column {
-                    Text(text = "Total Expenses", fontSize = 12.sp, color = GymTextSecondary)
+                    Text(text = "Total Expenses", fontSize = 12.sp, color = theme.textMuted)
                     Text(
                         text = "-$${formatAmount(totalExpenses)}",
                         fontSize = 18.sp,
@@ -292,19 +298,20 @@ private fun BalanceSheetSummaryCard(
 private fun ExpenseCategoryRow(
     categoryName: String,
     totalAmount: Double,
-    percentage: Float
+    percentage: Float,
+    theme: AppThemeColors
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = GymSurfaceDark),
+        colors = CardDefaults.cardColors(containerColor = theme.cardBg),
         shape = RoundedCornerShape(10.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().border(1.dp, theme.cardBorder, RoundedCornerShape(10.dp))
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(text = categoryName, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = GymTextPrimary)
+                Text(text = categoryName, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = theme.textMain)
                 Text(text = "$${formatAmount(totalAmount)}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = GymAccentDanger)
             }
             Spacer(modifier = Modifier.height(6.dp))
@@ -312,13 +319,13 @@ private fun ExpenseCategoryRow(
                 progress = { (percentage / 100f).coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
                 color = GymAccentDanger,
-                trackColor = GymCardDark
+                trackColor = theme.dividerColor
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "${formatAmount(percentage.toDouble())}% of total monthly expenses",
                 fontSize = 11.sp,
-                color = GymTextSecondary
+                color = theme.textMuted
             )
         }
     }
@@ -330,19 +337,21 @@ private fun TransactionLogRow(
     categoryName: String,
     amount: Double,
     type: TransactionType,
-    dateIso: String
+    dateIso: String,
+    theme: AppThemeColors
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(GymSurfaceDark, RoundedCornerShape(8.dp))
+            .background(theme.cardBg, RoundedCornerShape(8.dp))
+            .border(1.dp, theme.cardBorder, RoundedCornerShape(8.dp))
             .padding(12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column {
-            Text(text = title, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = GymTextPrimary)
-            Text(text = "$categoryName • $dateIso", fontSize = 11.sp, color = GymTextSecondary)
+            Text(text = title, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = theme.textMain)
+            Text(text = "$categoryName • $dateIso", fontSize = 11.sp, color = theme.textMuted)
         }
         val isIncome = type == TransactionType.INCOME
         Text(
@@ -358,6 +367,7 @@ private fun TransactionLogRow(
 private fun MonthYearSelectorButton(
     selectedMonth: Int,
     selectedYear: Int,
+    theme: AppThemeColors,
     onMonthYearSelected: (month: Int, year: Int) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -367,8 +377,8 @@ private fun MonthYearSelectorButton(
         Surface(
             onClick = { expanded = true },
             shape = RoundedCornerShape(8.dp),
-            color = GymSurfaceDark,
-            modifier = Modifier.border(1.dp, GymCardDark, RoundedCornerShape(8.dp))
+            color = theme.cardBg,
+            modifier = Modifier.border(1.dp, theme.cardBorder, RoundedCornerShape(8.dp))
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -378,16 +388,16 @@ private fun MonthYearSelectorButton(
                     text = "${months.getOrNull(selectedMonth - 1) ?: "Jul"} $selectedYear",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = GymTextPrimary
+                    color = theme.textMain
                 )
-                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = GymTextSecondary)
+                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = theme.textMuted)
             }
         }
 
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
-            modifier = Modifier.background(GymCardDark)
+            modifier = Modifier.background(theme.cardBg)
         ) {
             months.forEachIndexed { index, mName ->
                 DropdownMenuItem(
@@ -395,7 +405,7 @@ private fun MonthYearSelectorButton(
                         Text(
                             text = "$mName $selectedYear",
                             fontSize = 13.sp,
-                            color = if (index + 1 == selectedMonth) GymAccentPrimary else GymTextPrimary
+                            color = if (index + 1 == selectedMonth) GymAccentPrimary else theme.textMain
                         )
                     },
                     onClick = {
@@ -413,6 +423,7 @@ private fun MonthYearSelectorButton(
  */
 @Composable
 private fun AddExpenseDialog(
+    theme: AppThemeColors,
     onDismiss: () -> Unit,
     onSubmitExpense: (title: String, amount: Double, category: TransactionCategory) -> Unit
 ) {
@@ -425,9 +436,9 @@ private fun AddExpenseDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = GymCardDark,
+        containerColor = theme.cardBg,
         title = {
-            Text(text = "Log New Expense", color = GymTextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text(text = "Log New Expense", color = theme.textMain, fontWeight = FontWeight.Bold, fontSize = 18.sp)
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -435,13 +446,13 @@ private fun AddExpenseDialog(
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Description (e.g. Towel Service)", color = GymTextSecondary) },
+                    label = { Text("Description (e.g. Towel Service)", color = theme.textMuted) },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = GymTextPrimary,
-                        unfocusedTextColor = GymTextPrimary,
+                        focusedTextColor = theme.textMain,
+                        unfocusedTextColor = theme.textMain,
                         focusedBorderColor = GymAccentPrimary,
-                        unfocusedBorderColor = GymTextSecondary
+                        unfocusedBorderColor = theme.textMuted
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -450,45 +461,45 @@ private fun AddExpenseDialog(
                 OutlinedTextField(
                     value = amountText,
                     onValueChange = { amountText = it },
-                    label = { Text("Amount ($)", color = GymTextSecondary) },
+                    label = { Text("Amount ($)", color = theme.textMuted) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = GymTextPrimary,
-                        unfocusedTextColor = GymTextPrimary,
+                        focusedTextColor = theme.textMain,
+                        unfocusedTextColor = theme.textMain,
                         focusedBorderColor = GymAccentPrimary,
-                        unfocusedBorderColor = GymTextSecondary
+                        unfocusedBorderColor = theme.textMuted
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 // Category Dropdown Picker
-                Text(text = "Expense Category:", fontSize = 12.sp, color = GymTextSecondary)
+                Text(text = "Expense Category:", fontSize = 12.sp, color = theme.textMuted)
                 Box(modifier = Modifier.fillMaxWidth()) {
                     Surface(
                         onClick = { categoryDropdownExpanded = true },
                         shape = RoundedCornerShape(4.dp),
-                        color = GymSurfaceDark,
-                        modifier = Modifier.fillMaxWidth().border(1.dp, GymTextSecondary, RoundedCornerShape(4.dp))
+                        color = theme.cardBg,
+                        modifier = Modifier.fillMaxWidth().border(1.dp, theme.textMuted, RoundedCornerShape(4.dp))
                     ) {
                         Row(
                             modifier = Modifier.padding(12.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = selectedCategory.displayName, color = GymTextPrimary, fontSize = 13.sp)
-                            Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = GymTextSecondary)
+                            Text(text = selectedCategory.displayName, color = theme.textMain, fontSize = 13.sp)
+                            Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = theme.textMuted)
                         }
                     }
 
                     DropdownMenu(
                         expanded = categoryDropdownExpanded,
                         onDismissRequest = { categoryDropdownExpanded = false },
-                        modifier = Modifier.background(GymSurfaceDark)
+                        modifier = Modifier.background(theme.cardBg)
                     ) {
                         expenseCategories.forEach { cat ->
                             DropdownMenuItem(
-                                text = { Text(cat.displayName, color = GymTextPrimary, fontSize = 13.sp) },
+                                text = { Text(cat.displayName, color = theme.textMain, fontSize = 13.sp) },
                                 onClick = {
                                     selectedCategory = cat
                                     categoryDropdownExpanded = false
@@ -512,7 +523,7 @@ private fun AddExpenseDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = GymTextSecondary)
+                Text("Cancel", color = theme.textMuted)
             }
         }
     )

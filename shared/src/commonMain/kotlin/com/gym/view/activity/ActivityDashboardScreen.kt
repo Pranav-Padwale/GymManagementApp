@@ -12,10 +12,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.FitnessCenter
-import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Lock
@@ -35,25 +35,23 @@ import androidx.compose.ui.unit.sp
 import com.gym.controller.activity.ActivityUiState
 import com.gym.model.activity.NutritionMacro
 import com.gym.model.activity.TimeRange
+import com.gym.view.theme.AppThemeColors
+import com.gym.view.theme.getAppThemeColors
 
-// Exact Dark Design Colors from Mockup Screenshot
-private val DarkBg = Color(0xFF151518)
-private val CardBg = Color(0xFF202024)
 private val OrangeAccent = Color(0xFFFF6D25)
 private val BlueAccent = Color(0xFF3B82F6)
 private val GreenAccent = Color(0xFF84CC16)
 private val TealAccent = Color(0xFF00E676)
 private val PinkAccent = Color(0xFFFF1744)
-private val TextMain = Color(0xFFFFFFFF)
-private val TextMuted = Color(0xFFA1A1AA)
 
 /**
  * View (Passive Compose Multiplatform Screen): Member Fitness & Nutrition Activity Dashboard.
- * Strictly passive: renders [state] and forwards events via callbacks to ActivityController.
+ * Supports dynamic Dark Mode / Light Mode theme switching.
  */
 @Composable
 fun ActivityDashboardScreen(
     state: ActivityUiState,
+    isDarkMode: Boolean = true,
     onOpenDrawer: () -> Unit,
     onToggleCalendarDialog: (isOpen: Boolean) -> Unit,
     onCalendarDateSelected: (day: Int, month: Int, year: Int) -> Unit,
@@ -65,21 +63,24 @@ fun ActivityDashboardScreen(
     onBottomTabSelected: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val theme = getAppThemeColors(isDarkMode)
+
     Scaffold(
         bottomBar = {
             ActivityBottomNavBar(
                 activeTab = state.activeBottomTab,
+                theme = theme,
                 onTabSelected = onBottomTabSelected
             )
         },
-        containerColor = DarkBg,
+        containerColor = theme.bg,
         modifier = modifier
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(DarkBg)
+                .background(theme.bg)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -88,6 +89,7 @@ fun ActivityDashboardScreen(
             ActivityTopHeader(
                 selectedDateDisplay = state.selectedDateDisplay,
                 targetCalories = state.calorieData.totalTargetCalories,
+                theme = theme,
                 onOpenDrawer = onOpenDrawer,
                 onOpenCalendar = { onToggleCalendarDialog(true) }
             )
@@ -97,29 +99,31 @@ fun ActivityDashboardScreen(
                 caloriesLeft = state.calorieData.caloriesLeft,
                 burned = state.calorieData.caloriesBurned,
                 eaten = state.calorieData.caloriesEaten,
-                macros = state.macros
+                macros = state.macros,
+                theme = theme
             )
 
             // 3. Health Sync Permission Banner
             if (!state.isHealthPermissionGranted) {
-                HealthPermissionBannerCard(onGrantPermission = onGrantHealthPermission)
+                HealthPermissionBannerCard(theme = theme, onGrantPermission = onGrantHealthPermission)
             }
 
             // 4. Nutrition Table Card
-            NutritionTableCard(macros = state.macros)
+            NutritionTableCard(macros = state.macros, theme = theme)
 
             // 5. Calorie Consume / Burn Line Chart Card
             CalorieGraphCard(
                 state = state,
+                theme = theme,
                 onTimeRangeChanged = onGraphTimeRangeChanged,
                 onToggleSeries = onToggleSeries
             )
 
             // 6. Dosh Test Card
-            DoshTestCard()
+            DoshTestCard(theme = theme)
 
             // 7. Quick Action Grid (Exercise & Yoga)
-            QuickActionGrid()
+            QuickActionGrid(theme = theme)
         }
     }
 
@@ -143,6 +147,7 @@ fun ActivityDashboardScreen(
 private fun ActivityTopHeader(
     selectedDateDisplay: String,
     targetCalories: Double,
+    theme: AppThemeColors,
     onOpenDrawer: () -> Unit,
     onOpenCalendar: () -> Unit
 ) {
@@ -153,7 +158,7 @@ private fun ActivityTopHeader(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onOpenDrawer, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Default.Menu, contentDescription = "Menu", tint = TextMain)
+                Icon(Icons.Default.Menu, contentDescription = "Menu", tint = theme.textMain)
             }
             Spacer(modifier = Modifier.width(8.dp))
 
@@ -161,8 +166,8 @@ private fun ActivityTopHeader(
             Surface(
                 onClick = onOpenCalendar,
                 shape = RoundedCornerShape(12.dp),
-                color = CardBg,
-                modifier = Modifier.border(1.dp, Color(0xFF3F3F46), RoundedCornerShape(12.dp))
+                color = theme.cardBg,
+                modifier = Modifier.border(1.dp, theme.cardBorder, RoundedCornerShape(12.dp))
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -170,19 +175,19 @@ private fun ActivityTopHeader(
                 ) {
                     Icon(Icons.Default.CalendarMonth, contentDescription = "Calendar", tint = OrangeAccent, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = selectedDateDisplay, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMain)
+                    Text(text = selectedDateDisplay, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = theme.textMain)
                     Spacer(modifier = Modifier.width(4.dp))
-                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = TextMuted, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = theme.textMuted, modifier = Modifier.size(18.dp))
                 }
             }
         }
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Icon(Icons.Default.QrCodeScanner, contentDescription = "QR Scanner", tint = TextMain, modifier = Modifier.size(22.dp))
+            Icon(Icons.Default.QrCodeScanner, contentDescription = "QR Scanner", tint = theme.textMain, modifier = Modifier.size(22.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.LocalFireDepartment, contentDescription = null, tint = OrangeAccent, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(text = "Calories : $targetCalories", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextMain)
+                Text(text = "Calories : $targetCalories", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = theme.textMain)
             }
         }
     }
@@ -193,12 +198,13 @@ private fun CalorieDonutRingCard(
     caloriesLeft: Double,
     burned: Double,
     eaten: Double,
-    macros: List<NutritionMacro>
+    macros: List<NutritionMacro>,
+    theme: AppThemeColors
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = CardBg),
+        colors = CardDefaults.cardColors(containerColor = theme.cardBg),
         shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().border(1.dp, theme.cardBorder, RoundedCornerShape(16.dp))
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -211,8 +217,8 @@ private fun CalorieDonutRingCard(
             ) {
                 // Burned Callout
                 Column(horizontalAlignment = Alignment.Start) {
-                    Text(text = "Burned", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextMain)
-                    Text(text = "$burned", fontSize = 14.sp, color = TextMuted)
+                    Text(text = "Burned", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = theme.textMain)
+                    Text(text = "$burned", fontSize = 14.sp, color = theme.textMuted)
                 }
 
                 // Donut Ring Canvas
@@ -220,8 +226,8 @@ private fun CalorieDonutRingCard(
 
                 // Eaten Callout
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(text = "Eaten", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextMain)
-                    Text(text = "$eaten", fontSize = 14.sp, color = TextMuted)
+                    Text(text = "Eaten", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = theme.textMain)
+                    Text(text = "$eaten", fontSize = 14.sp, color = theme.textMuted)
                 }
             }
 
@@ -243,7 +249,7 @@ private fun CalorieDonutRingCard(
                         Spacer(modifier = Modifier.width(6.dp))
                         Column {
                             Text(text = "${macro.totalGrams} g", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = color)
-                            Text(text = macro.name, fontSize = 11.sp, color = TextMuted)
+                            Text(text = macro.name, fontSize = 11.sp, color = theme.textMuted)
                         }
                     }
                 }
@@ -253,11 +259,11 @@ private fun CalorieDonutRingCard(
 }
 
 @Composable
-private fun HealthPermissionBannerCard(onGrantPermission: () -> Unit) {
+private fun HealthPermissionBannerCard(theme: AppThemeColors, onGrantPermission: () -> Unit) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = CardBg),
+        colors = CardDefaults.cardColors(containerColor = theme.cardBg),
         shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth().border(1.dp, Color(0xFF3F3F46), RoundedCornerShape(16.dp))
+        modifier = Modifier.fillMaxWidth().border(1.dp, theme.cardBorder, RoundedCornerShape(16.dp))
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -276,11 +282,11 @@ private fun HealthPermissionBannerCard(onGrantPermission: () -> Unit) {
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = "Permission needed", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextMain)
+                Text(text = "Permission needed", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = theme.textMain)
                 Text(
                     text = "Allow access to your health data to sync steps, calories, and more.",
                     fontSize = 11.sp,
-                    color = TextMuted
+                    color = theme.textMuted
                 )
             }
 
@@ -292,30 +298,30 @@ private fun HealthPermissionBannerCard(onGrantPermission: () -> Unit) {
                 shape = RoundedCornerShape(10.dp),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
             ) {
-                Text(text = "Grant permission", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextMain)
+                Text(text = "Grant permission", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
             }
         }
     }
 }
 
 @Composable
-private fun NutritionTableCard(macros: List<NutritionMacro>) {
+private fun NutritionTableCard(macros: List<NutritionMacro>, theme: AppThemeColors) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = CardBg),
+        colors = CardDefaults.cardColors(containerColor = theme.cardBg),
         shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().border(1.dp, theme.cardBorder, RoundedCornerShape(16.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // Table Header Row
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(text = "Nutrition", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextMain, modifier = Modifier.weight(1.5f))
-                Text(text = "Total", fontSize = 12.sp, color = TextMuted, modifier = Modifier.weight(1f))
-                Text(text = "Consumed", fontSize = 12.sp, color = TextMuted, modifier = Modifier.weight(1f))
-                Text(text = "Remaining", fontSize = 12.sp, color = TextMuted, modifier = Modifier.weight(1f))
+                Text(text = "Nutrition", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = theme.textMain, modifier = Modifier.weight(1.5f))
+                Text(text = "Total", fontSize = 12.sp, color = theme.textMuted, modifier = Modifier.weight(1f))
+                Text(text = "Consumed", fontSize = 12.sp, color = theme.textMuted, modifier = Modifier.weight(1f))
+                Text(text = "Remaining", fontSize = 12.sp, color = theme.textMuted, modifier = Modifier.weight(1f))
             }
 
             Spacer(modifier = Modifier.height(10.dp))
-            HorizontalDivider(color = Color(0xFF27272A))
+            HorizontalDivider(color = theme.dividerColor)
             Spacer(modifier = Modifier.height(10.dp))
 
             macros.forEach { macro ->
@@ -332,10 +338,10 @@ private fun NutritionTableCard(macros: List<NutritionMacro>) {
                     Row(modifier = Modifier.weight(1.5f), verticalAlignment = Alignment.CenterVertically) {
                         Text(text = macro.emojiIcon, fontSize = 14.sp)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "${macro.name} (${macro.percentage} %)", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextMain)
+                        Text(text = "${macro.name} (${macro.percentage} %)", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = theme.textMain)
                     }
-                    Text(text = "${macro.totalGrams} g", fontSize = 12.sp, color = TextMain, modifier = Modifier.weight(1f))
-                    Text(text = "${macro.consumedGrams} g", fontSize = 12.sp, color = TextMain, modifier = Modifier.weight(1f))
+                    Text(text = "${macro.totalGrams} g", fontSize = 12.sp, color = theme.textMain, modifier = Modifier.weight(1f))
+                    Text(text = "${macro.consumedGrams} g", fontSize = 12.sp, color = theme.textMain, modifier = Modifier.weight(1f))
                     Text(text = "${macro.remainingGrams} g", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = color, modifier = Modifier.weight(1f))
                 }
             }
@@ -346,16 +352,17 @@ private fun NutritionTableCard(macros: List<NutritionMacro>) {
 @Composable
 private fun CalorieGraphCard(
     state: ActivityUiState,
+    theme: AppThemeColors,
     onTimeRangeChanged: (TimeRange) -> Unit,
     onToggleSeries: (Boolean, Boolean, Boolean) -> Unit
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = CardBg),
+        colors = CardDefaults.cardColors(containerColor = theme.cardBg),
         shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().border(1.dp, theme.cardBorder, RoundedCornerShape(16.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = "Calorie Consume/Burn Graph", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextMain)
+            Text(text = "Calorie Consume/Burn Graph", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = theme.textMain)
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -368,7 +375,7 @@ private fun CalorieGraphCard(
                         colors = SwitchDefaults.colors(checkedThumbColor = OrangeAccent, checkedTrackColor = OrangeAccent.copy(alpha = 0.3f))
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "Calories", fontSize = 12.sp, color = TextMain)
+                    Text(text = "Calories", fontSize = 12.sp, color = theme.textMain)
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -378,7 +385,7 @@ private fun CalorieGraphCard(
                         colors = SwitchDefaults.colors(checkedThumbColor = TealAccent, checkedTrackColor = TealAccent.copy(alpha = 0.3f))
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "Eaten", fontSize = 12.sp, color = TextMain)
+                    Text(text = "Eaten", fontSize = 12.sp, color = theme.textMain)
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -388,7 +395,7 @@ private fun CalorieGraphCard(
                         colors = SwitchDefaults.colors(checkedThumbColor = PinkAccent, checkedTrackColor = PinkAccent.copy(alpha = 0.3f))
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "Burn", fontSize = 12.sp, color = TextMain)
+                    Text(text = "Burn", fontSize = 12.sp, color = theme.textMain)
                 }
             }
 
@@ -406,7 +413,7 @@ private fun CalorieGraphCard(
                             text = range.displayName,
                             fontSize = 12.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) TextMain else TextMuted
+                            color = if (isSelected) theme.textMain else theme.textMuted
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         if (isSelected) {
@@ -430,14 +437,14 @@ private fun CalorieGraphCard(
 }
 
 @Composable
-private fun DoshTestCard() {
+private fun DoshTestCard(theme: AppThemeColors) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = CardBg),
+        colors = CardDefaults.cardColors(containerColor = theme.cardBg),
         shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().border(1.dp, theme.cardBorder, RoundedCornerShape(16.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = "Dosh Test", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextMain)
+            Text(text = "Dosh Test", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = theme.textMain)
             Spacer(modifier = Modifier.height(12.dp))
 
             Row(
@@ -465,7 +472,7 @@ private fun DoshTestCard() {
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
                 ) {
-                    Text(text = "Get Your First\nDosh Test", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMain)
+                    Text(text = "Get Your First\nDosh Test", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
         }
@@ -473,39 +480,39 @@ private fun DoshTestCard() {
 }
 
 @Composable
-private fun QuickActionGrid() {
+private fun QuickActionGrid(theme: AppThemeColors) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         // Exercise Card
         Card(
-            colors = CardDefaults.cardColors(containerColor = CardBg),
+            colors = CardDefaults.cardColors(containerColor = theme.cardBg),
             shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.weight(1f).height(140.dp)
+            modifier = Modifier.weight(1f).height(140.dp).border(1.dp, theme.cardBorder, RoundedCornerShape(16.dp))
         ) {
             Column(
                 modifier = Modifier.fillMaxSize().padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Icon(Icons.Default.FitnessCenter, contentDescription = null, tint = TextMain, modifier = Modifier.size(36.dp))
+                Icon(Icons.Default.FitnessCenter, contentDescription = null, tint = theme.textMain, modifier = Modifier.size(36.dp))
                 Spacer(modifier = Modifier.height(12.dp))
-                Text(text = "Exercise", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextMain)
+                Text(text = "Exercise", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = theme.textMain)
             }
         }
 
         // Yoga Card
         Card(
-            colors = CardDefaults.cardColors(containerColor = CardBg),
+            colors = CardDefaults.cardColors(containerColor = theme.cardBg),
             shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.weight(1f).height(140.dp)
+            modifier = Modifier.weight(1f).height(140.dp).border(1.dp, theme.cardBorder, RoundedCornerShape(16.dp))
         ) {
             Column(
                 modifier = Modifier.fillMaxSize().padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Icon(Icons.Default.SelfImprovement, contentDescription = null, tint = TextMain, modifier = Modifier.size(36.dp))
+                Icon(Icons.Default.SelfImprovement, contentDescription = null, tint = theme.textMain, modifier = Modifier.size(36.dp))
                 Spacer(modifier = Modifier.height(12.dp))
-                Text(text = "Yoga", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextMain)
+                Text(text = "Yoga", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = theme.textMain)
             }
         }
     }
@@ -514,12 +521,13 @@ private fun QuickActionGrid() {
 @Composable
 private fun ActivityBottomNavBar(
     activeTab: String,
+    theme: AppThemeColors,
     onTabSelected: (String) -> Unit
 ) {
-    NavigationBar(containerColor = CardBg, tonalElevation = 8.dp) {
+    NavigationBar(containerColor = theme.cardBg, tonalElevation = 8.dp) {
         val tabs = listOf(
             Triple("Activity", Icons.Default.TrackChanges, "Activity"),
-            Triple("Goal", Icons.Default.FormatListBulleted, "Goal"),
+            Triple("Goal", Icons.AutoMirrored.Filled.FormatListBulleted, "Goal"),
             Triple("Workout Plan", Icons.Default.FitnessCenter, "Workout Plan"),
             Triple("Diet Plan", Icons.Default.LocalFireDepartment, "Diet Plan"),
             Triple("Profile", Icons.Default.AccountCircle, "Profile")
@@ -530,8 +538,8 @@ private fun ActivityBottomNavBar(
             NavigationBarItem(
                 selected = isSelected,
                 onClick = { onTabSelected(key) },
-                icon = { Icon(icon, contentDescription = label, tint = if (isSelected) OrangeAccent else TextMuted) },
-                label = { Text(label, fontSize = 10.sp, color = if (isSelected) OrangeAccent else TextMuted) }
+                icon = { Icon(icon, contentDescription = label, tint = if (isSelected) OrangeAccent else theme.textMuted) },
+                label = { Text(label, fontSize = 10.sp, color = if (isSelected) OrangeAccent else theme.textMuted) }
             )
         }
     }

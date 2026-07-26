@@ -12,7 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
@@ -34,11 +34,12 @@ import com.gym.view.theme.*
 
 /**
  * View (Passive Compose Multiplatform Screen): Member Status Management.
- * Features Hamburger Menu ☰ & Back Arrow ⬅️ navigation header.
+ * Dynamically adapts colors between Dark Mode and Light Mode.
  */
 @Composable
 fun MemberManagementScreen(
     state: MemberUiState,
+    isDarkMode: Boolean = true,
     onOpenDrawer: () -> Unit,
     onNavigateBack: () -> Unit,
     onFilterStatusChanged: (MemberStatus?) -> Unit,
@@ -46,10 +47,12 @@ fun MemberManagementScreen(
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val theme = getAppThemeColors(isDarkMode)
+
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(GymDarkBackground)
+            .background(theme.bg)
             .padding(16.dp)
     ) {
         // Navigation Header Row (Hamburger ☰ & Back Arrow ⬅️)
@@ -61,12 +64,12 @@ fun MemberManagementScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // Hamburger Menu Trigger
                 IconButton(onClick = onOpenDrawer, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.Menu, contentDescription = "Open Hamburger Menu", tint = GymTextPrimary)
+                    Icon(Icons.Default.Menu, contentDescription = "Open Hamburger Menu", tint = theme.textMain)
                 }
 
                 // Back Arrow Button
                 IconButton(onClick = onNavigateBack, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back to Main Dashboard", tint = GymTextPrimary)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to Main Dashboard", tint = theme.textMain)
                 }
 
                 Spacer(modifier = Modifier.width(6.dp))
@@ -76,12 +79,12 @@ fun MemberManagementScreen(
                         text = "Member Directory",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = GymTextPrimary
+                        color = theme.textMain
                     )
                     Text(
                         text = "Total: ${state.totalCount}  •  Active: ${state.activeCount}",
                         fontSize = 12.sp,
-                        color = GymTextSecondary
+                        color = theme.textMuted
                     )
                 }
             }
@@ -90,7 +93,7 @@ fun MemberManagementScreen(
                 onClick = onRefresh,
                 modifier = Modifier
                     .clip(CircleShape)
-                    .background(GymSurfaceDark)
+                    .background(theme.cardBg)
             ) {
                 Icon(
                     imageVector = Icons.Default.Refresh,
@@ -129,7 +132,7 @@ fun MemberManagementScreen(
             text = "Filter by Status:",
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
-            color = GymTextSecondary,
+            color = theme.textMuted,
             modifier = Modifier.padding(bottom = 8.dp)
         )
         LazyRow(
@@ -141,6 +144,7 @@ fun MemberManagementScreen(
                     label = "All Members (${state.totalCount})",
                     isSelected = state.selectedFilter == null,
                     badgeColor = GymAccentPrimary,
+                    theme = theme,
                     onClick = { onFilterStatusChanged(null) }
                 )
             }
@@ -148,13 +152,14 @@ fun MemberManagementScreen(
                 val badgeColor = when (status) {
                     MemberStatus.ACTIVE -> GymAccentSecondary
                     MemberStatus.ENQUIRE -> GymAccentWarning
-                    MemberStatus.INACTIVE -> GymTextSecondary
+                    MemberStatus.INACTIVE -> theme.textMuted
                     MemberStatus.EXPIRED -> GymAccentDanger
                 }
                 FilterChipItem(
                     label = status.displayName,
                     isSelected = state.selectedFilter == status,
                     badgeColor = badgeColor,
+                    theme = theme,
                     onClick = { onFilterStatusChanged(status) }
                 )
             }
@@ -175,7 +180,7 @@ fun MemberManagementScreen(
             ) {
                 Text(
                     text = "No members found for selected status filter.",
-                    color = GymTextSecondary,
+                    color = theme.textMuted,
                     fontSize = 14.sp
                 )
             }
@@ -187,6 +192,7 @@ fun MemberManagementScreen(
                 items(state.members, key = { it.id }) { member ->
                     MemberCardItem(
                         member = member,
+                        theme = theme,
                         onUpdateStatus = { newStatus ->
                             onUpdateMemberStatus(member.id, newStatus)
                         }
@@ -202,15 +208,16 @@ private fun FilterChipItem(
     label: String,
     isSelected: Boolean,
     badgeColor: Color,
+    theme: AppThemeColors,
     onClick: () -> Unit
 ) {
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
-        color = if (isSelected) badgeColor.copy(alpha = 0.25f) else GymSurfaceDark,
+        color = if (isSelected) badgeColor.copy(alpha = 0.25f) else theme.cardBg,
         modifier = Modifier.border(
             width = if (isSelected) 1.5.dp else 1.dp,
-            color = if (isSelected) badgeColor else Color.Transparent,
+            color = if (isSelected) badgeColor else theme.cardBorder,
             shape = RoundedCornerShape(20.dp)
         )
     ) {
@@ -229,7 +236,7 @@ private fun FilterChipItem(
                 text = label,
                 fontSize = 13.sp,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = if (isSelected) GymTextPrimary else GymTextSecondary
+                color = if (isSelected) theme.textMain else theme.textMuted
             )
         }
     }
@@ -238,6 +245,7 @@ private fun FilterChipItem(
 @Composable
 private fun MemberCardItem(
     member: Member,
+    theme: AppThemeColors,
     onUpdateStatus: (MemberStatus) -> Unit
 ) {
     var isStatusMenuExpanded by remember { mutableStateOf(false) }
@@ -245,14 +253,14 @@ private fun MemberCardItem(
     val statusColor = when (member.status) {
         MemberStatus.ACTIVE -> GymAccentSecondary
         MemberStatus.ENQUIRE -> GymAccentWarning
-        MemberStatus.INACTIVE -> GymTextSecondary
+        MemberStatus.INACTIVE -> theme.textMuted
         MemberStatus.EXPIRED -> GymAccentDanger
     }
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = GymSurfaceDark),
+        colors = CardDefaults.cardColors(containerColor = theme.cardBg),
         shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().border(1.dp, theme.cardBorder, RoundedCornerShape(12.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -280,12 +288,12 @@ private fun MemberCardItem(
                             text = member.fullName,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            color = GymTextPrimary
+                            color = theme.textMain
                         )
                         Text(
                             text = "Plan: ${member.membershipPlan}  •  ${member.email}",
                             fontSize = 12.sp,
-                            color = GymTextSecondary
+                            color = theme.textMuted
                         )
                     }
                 }
@@ -314,7 +322,7 @@ private fun MemberCardItem(
                     DropdownMenu(
                         expanded = isStatusMenuExpanded,
                         onDismissRequest = { isStatusMenuExpanded = false },
-                        modifier = Modifier.background(GymCardDark)
+                        modifier = Modifier.background(theme.cardBg)
                     ) {
                         MemberStatus.entries.forEach { statusOption ->
                             DropdownMenuItem(
@@ -329,7 +337,7 @@ private fun MemberCardItem(
                                             )
                                             Spacer(modifier = Modifier.width(6.dp))
                                         }
-                                        Text(statusOption.displayName, color = GymTextPrimary, fontSize = 13.sp)
+                                        Text(statusOption.displayName, color = theme.textMain, fontSize = 13.sp)
                                     }
                                 },
                                 onClick = {
@@ -345,15 +353,15 @@ private fun MemberCardItem(
             }
 
             Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider(color = GymCardDark)
+            HorizontalDivider(color = theme.dividerColor)
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(text = "Joined: ${member.joinDate}", fontSize = 11.sp, color = GymTextSecondary)
-                Text(text = "Expires: ${member.expiryDate}", fontSize = 11.sp, color = GymTextSecondary)
+                Text(text = "Joined: ${member.joinDate}", fontSize = 11.sp, color = theme.textMuted)
+                Text(text = "Expires: ${member.expiryDate}", fontSize = 11.sp, color = theme.textMuted)
             }
         }
     }
