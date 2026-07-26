@@ -1,6 +1,5 @@
 package com.gym.view.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -39,6 +38,38 @@ private val LightColorScheme = lightColorScheme(
     onBackground = Color(0xFF0F172A),
     onSurface = Color(0xFF0F172A)
 )
+
+data class AppThemeColors(
+    val bg: Color,
+    val cardBg: Color,
+    val cardBorder: Color,
+    val textMain: Color,
+    val textMuted: Color,
+    val dividerColor: Color
+)
+
+@Composable
+fun getAppThemeColors(isDarkMode: Boolean): AppThemeColors {
+    return if (isDarkMode) {
+        AppThemeColors(
+            bg = Color(0xFF151518),
+            cardBg = Color(0xFF202024),
+            cardBorder = Color(0xFF3F3F46),
+            textMain = Color(0xFFFFFFFF),
+            textMuted = Color(0xFFA1A1AA),
+            dividerColor = Color(0xFF27272A)
+        )
+    } else {
+        AppThemeColors(
+            bg = Color(0xFFF1F5F9),
+            cardBg = Color(0xFFFFFFFF),
+            cardBorder = Color(0xFFCBD5E1),
+            textMain = Color(0xFF0F172A),
+            textMuted = Color(0xFF64748B),
+            dividerColor = Color(0xFFE2E8F0)
+        )
+    }
+}
 
 @Composable
 fun GymTheme(

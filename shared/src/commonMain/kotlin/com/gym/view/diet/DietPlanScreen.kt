@@ -8,11 +8,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,24 +26,22 @@ import androidx.compose.ui.unit.sp
 import com.gym.controller.diet.DietPlanUiState
 import com.gym.model.diet.FoodItem
 import com.gym.model.diet.MealCategory
+import com.gym.view.theme.AppThemeColors
+import com.gym.view.theme.getAppThemeColors
 
-private val DarkBg = Color(0xFF151518)
-private val CardBg = Color(0xFF202024)
-private val CardBorder = Color(0xFF3F3F46)
 private val OrangeAccent = Color(0xFFFF6D25)
 private val BlueAccent = Color(0xFF3B82F6)
 private val GreenAccent = Color(0xFF84CC16)
-private val TextMain = Color(0xFFFFFFFF)
-private val TextMuted = Color(0xFFA1A1AA)
 
 /**
  * View (Passive Compose Multiplatform Screen): Diet Plan for Member.
- * Renders header, trainer selector dropdown, donut macro card, 4 meal cards (Breakfast, Lunch, Snacks, Dinner),
- * and "No diet plan found !" footer matching the exact provided screenshot design.
+ * Dynamically adapts colors between Dark Mode and Light Mode.
  */
 @Composable
 fun DietPlanScreen(
     state: DietPlanUiState,
+    isDarkMode: Boolean = true,
+    onOpenDrawer: () -> Unit,
     onNavigateBack: () -> Unit,
     onTrainerSelected: (String) -> Unit,
     onToggleTrainerDropdown: (Boolean) -> Unit,
@@ -50,22 +49,26 @@ fun DietPlanScreen(
     onRemoveFoodItem: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val theme = getAppThemeColors(isDarkMode)
+
     Scaffold(
-        containerColor = DarkBg,
+        containerColor = theme.bg,
         modifier = modifier
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(DarkBg)
+                .background(theme.bg)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. Top Navigation Bar: Back Arrow, "Diet Plan for", Date Picker Trigger
+            // 1. Top Navigation Bar: Hamburger Menu ☰, Back Arrow ⬅️, "Diet Plan for", Date Picker Trigger
             DietPlanTopHeader(
                 selectedDateDisplay = state.selectedDateDisplay,
+                theme = theme,
+                onOpenDrawer = onOpenDrawer,
                 onNavigateBack = onNavigateBack
             )
 
@@ -74,6 +77,7 @@ fun DietPlanScreen(
                 selectedTrainer = state.selectedTrainer,
                 availableTrainers = state.availableTrainers,
                 isExpanded = state.isTrainerDropdownExpanded,
+                theme = theme,
                 onToggleDropdown = onToggleTrainerDropdown,
                 onTrainerSelected = onTrainerSelected
             )
@@ -87,7 +91,8 @@ fun DietPlanScreen(
                 consumedProtein = state.consumedProteinGrams,
                 targetProtein = state.targetProteinGrams,
                 consumedFat = state.consumedFatGrams,
-                targetFat = state.targetFatGrams
+                targetFat = state.targetFatGrams,
+                theme = theme
             )
 
             // 4. Meal Section Cards (Breakfast, Lunch, Snacks, Dinner)
@@ -95,6 +100,7 @@ fun DietPlanScreen(
                 MealSectionCard(
                     category = category,
                     foodItems = state.getItemsForCategory(category),
+                    theme = theme,
                     onCameraClick = { onCameraIconClicked(category) },
                     onRemoveItem = onRemoveFoodItem
                 )
@@ -111,7 +117,7 @@ fun DietPlanScreen(
                     text = "No diet plan found !",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextMain
+                    color = theme.textMain
                 )
             }
         }
@@ -121,6 +127,8 @@ fun DietPlanScreen(
 @Composable
 private fun DietPlanTopHeader(
     selectedDateDisplay: String,
+    theme: AppThemeColors,
+    onOpenDrawer: () -> Unit,
     onNavigateBack: () -> Unit
 ) {
     Row(
@@ -129,23 +137,30 @@ private fun DietPlanTopHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onNavigateBack, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = TextMain)
+            // Hamburger Menu Trigger ☰
+            IconButton(onClick = onOpenDrawer, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Default.Menu, contentDescription = "Open Hamburger Menu", tint = theme.textMain)
             }
-            Spacer(modifier = Modifier.width(8.dp))
+
+            // Back Arrow Button ⬅️
+            IconButton(onClick = onNavigateBack, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = theme.textMain)
+            }
+
+            Spacer(modifier = Modifier.width(4.dp))
             Text(
                 text = "Diet Plan for",
-                fontSize = 18.sp,
+                fontSize = 17.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextMain
+                color = theme.textMain
             )
         }
 
         // Date Display Badge (📅 26/07/2026)
         Surface(
             shape = RoundedCornerShape(10.dp),
-            color = CardBg,
-            modifier = Modifier.border(1.dp, CardBorder, RoundedCornerShape(10.dp))
+            color = theme.cardBg,
+            modifier = Modifier.border(1.dp, theme.cardBorder, RoundedCornerShape(10.dp))
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -154,7 +169,7 @@ private fun DietPlanTopHeader(
                 Icon(
                     imageVector = Icons.Default.CalendarMonth,
                     contentDescription = "Date",
-                    tint = TextMain,
+                    tint = theme.textMain,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
@@ -162,7 +177,7 @@ private fun DietPlanTopHeader(
                     text = selectedDateDisplay,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextMain
+                    color = theme.textMain
                 )
             }
         }
@@ -174,6 +189,7 @@ private fun TrainerSelectorDropdown(
     selectedTrainer: String,
     availableTrainers: List<String>,
     isExpanded: Boolean,
+    theme: AppThemeColors,
     onToggleDropdown: (Boolean) -> Unit,
     onTrainerSelected: (String) -> Unit
 ) {
@@ -181,8 +197,8 @@ private fun TrainerSelectorDropdown(
         Surface(
             onClick = { onToggleDropdown(!isExpanded) },
             shape = RoundedCornerShape(10.dp),
-            color = CardBg,
-            modifier = Modifier.fillMaxWidth().border(1.dp, CardBorder, RoundedCornerShape(10.dp))
+            color = theme.cardBg,
+            modifier = Modifier.fillMaxWidth().border(1.dp, theme.cardBorder, RoundedCornerShape(10.dp))
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
@@ -193,12 +209,12 @@ private fun TrainerSelectorDropdown(
                     text = selectedTrainer,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
-                    color = TextMain
+                    color = theme.textMain
                 )
                 Icon(
                     imageVector = Icons.Default.ArrowDropDown,
                     contentDescription = null,
-                    tint = TextMain
+                    tint = theme.textMain
                 )
             }
         }
@@ -206,7 +222,7 @@ private fun TrainerSelectorDropdown(
         DropdownMenu(
             expanded = isExpanded,
             onDismissRequest = { onToggleDropdown(false) },
-            modifier = Modifier.background(CardBg)
+            modifier = Modifier.background(theme.cardBg)
         ) {
             availableTrainers.forEach { trainer ->
                 DropdownMenuItem(
@@ -214,7 +230,7 @@ private fun TrainerSelectorDropdown(
                         Text(
                             text = trainer,
                             fontSize = 13.sp,
-                            color = if (trainer == selectedTrainer) OrangeAccent else TextMain,
+                            color = if (trainer == selectedTrainer) OrangeAccent else theme.textMain,
                             fontWeight = if (trainer == selectedTrainer) FontWeight.Bold else FontWeight.Normal
                         )
                     },
@@ -234,12 +250,13 @@ private fun DietMacroRingCard(
     consumedProtein: Int,
     targetProtein: Int,
     consumedFat: Int,
-    targetFat: Int
+    targetFat: Int,
+    theme: AppThemeColors
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = CardBg),
+        colors = CardDefaults.cardColors(containerColor = theme.cardBg),
         shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().border(1.dp, theme.cardBorder, RoundedCornerShape(16.dp))
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -269,7 +286,7 @@ private fun DietMacroRingCard(
                             fontWeight = FontWeight.Bold,
                             color = OrangeAccent
                         )
-                        Text(text = "Carbs", fontSize = 11.sp, color = TextMuted)
+                        Text(text = "Carbs", fontSize = 11.sp, color = theme.textMuted)
                     }
                 }
 
@@ -284,7 +301,7 @@ private fun DietMacroRingCard(
                             fontWeight = FontWeight.Bold,
                             color = BlueAccent
                         )
-                        Text(text = "Protein", fontSize = 11.sp, color = TextMuted)
+                        Text(text = "Protein", fontSize = 11.sp, color = theme.textMuted)
                     }
                 }
 
@@ -299,7 +316,7 @@ private fun DietMacroRingCard(
                             fontWeight = FontWeight.Bold,
                             color = GreenAccent
                         )
-                        Text(text = "Fat", fontSize = 11.sp, color = TextMuted)
+                        Text(text = "Fat", fontSize = 11.sp, color = theme.textMuted)
                     }
                 }
             }
@@ -311,13 +328,14 @@ private fun DietMacroRingCard(
 private fun MealSectionCard(
     category: MealCategory,
     foodItems: List<FoodItem>,
+    theme: AppThemeColors,
     onCameraClick: () -> Unit,
     onRemoveItem: (String) -> Unit
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = CardBg),
+        colors = CardDefaults.cardColors(containerColor = theme.cardBg),
         shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth().border(1.dp, CardBorder, RoundedCornerShape(16.dp))
+        modifier = Modifier.fillMaxWidth().border(1.dp, theme.cardBorder, RoundedCornerShape(16.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // Header Row: Section Title (e.g. "Breakfast") + Camera Button 📷
@@ -330,7 +348,7 @@ private fun MealSectionCard(
                     text = category.displayName,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextMain
+                    color = theme.textMain
                 )
 
                 // Orange Outlined Camera Button 📷
@@ -364,28 +382,28 @@ private fun MealSectionCard(
                     text = "Food",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextMain,
+                    color = theme.textMain,
                     modifier = Modifier.weight(2f)
                 )
                 Text(
                     text = "Qty(gm)",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextMain,
+                    color = theme.textMain,
                     modifier = Modifier.weight(1.2f)
                 )
                 Text(
                     text = "Calories",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextMain,
+                    color = theme.textMain,
                     modifier = Modifier.weight(1.2f)
                 )
                 Text(
                     text = "Action",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextMain,
+                    color = theme.textMain,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -393,7 +411,7 @@ private fun MealSectionCard(
             // Food Items List (if present)
             if (foodItems.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
-                HorizontalDivider(color = Color(0xFF27272A))
+                HorizontalDivider(color = theme.dividerColor)
                 foodItems.forEach { item ->
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -402,19 +420,19 @@ private fun MealSectionCard(
                         Text(
                             text = item.name,
                             fontSize = 13.sp,
-                            color = TextMain,
+                            color = theme.textMain,
                             modifier = Modifier.weight(2f)
                         )
                         Text(
                             text = "${item.quantityGrams.toInt()}",
                             fontSize = 13.sp,
-                            color = TextMuted,
+                            color = theme.textMuted,
                             modifier = Modifier.weight(1.2f)
                         )
                         Text(
                             text = "${item.calories.toInt()}",
                             fontSize = 13.sp,
-                            color = TextMuted,
+                            color = theme.textMuted,
                             modifier = Modifier.weight(1.2f)
                         )
                         IconButton(

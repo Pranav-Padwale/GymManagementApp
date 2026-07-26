@@ -23,12 +23,12 @@ import com.gym.view.drawer.HamburgerSideDrawer
 import com.gym.view.finance.FinanceDashboardScreen
 import com.gym.view.goal.EditGoalScreen
 import com.gym.view.member.MemberManagementScreen
-import com.gym.view.theme.GymDarkBackground
 import com.gym.view.theme.GymTheme
+import com.gym.view.theme.getAppThemeColors
 
 /**
  * Main Application Entry Point binding Model, Controller, and View components.
- * Supports navigation between Fitness Activity, Diet Plan, Edit Goal, Member Status, and Balance Sheet.
+ * Supports dynamic Dark / Light mode switching across all screens.
  */
 @Composable
 fun App() {
@@ -56,7 +56,10 @@ fun App() {
     val memberState by memberController.uiState.collectAsState()
     val financeState by financeController.uiState.collectAsState()
 
-    GymTheme(darkTheme = drawerState.profile.isDarkMode) {
+    val isDarkMode = drawerState.profile.isDarkMode
+    val appTheme = getAppThemeColors(isDarkMode)
+
+    GymTheme(darkTheme = isDarkMode) {
         HamburgerSideDrawer(
             state = drawerState,
             onCloseDrawer = { drawerController.onToggleDrawer(false) },
@@ -66,12 +69,13 @@ fun App() {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(GymDarkBackground)
+                    .background(appTheme.bg)
             ) {
                 when (drawerState.selectedMenuItemId) {
                     "fitness_activity" -> {
                         ActivityDashboardScreen(
                             state = activityState,
+                            isDarkMode = isDarkMode,
                             onOpenDrawer = {
                                 drawerController.onToggleDrawer(true)
                             },
@@ -108,6 +112,10 @@ fun App() {
                     "diet_plan" -> {
                         DietPlanScreen(
                             state = dietPlanState,
+                            isDarkMode = isDarkMode,
+                            onOpenDrawer = {
+                                drawerController.onToggleDrawer(true)
+                            },
                             onNavigateBack = {
                                 drawerController.onMenuItemClicked("fitness_activity", "Fitness Activity")
                             },
@@ -126,9 +134,12 @@ fun App() {
                         )
                     }
                     "edit_goal", "gym_plan" -> {
-                        // Passive View receiving state & emitting events to GoalController
                         EditGoalScreen(
                             state = goalState,
+                            isDarkMode = isDarkMode,
+                            onOpenDrawer = {
+                                drawerController.onToggleDrawer(true)
+                            },
                             onNavigateBack = {
                                 drawerController.onMenuItemClicked("fitness_activity", "Fitness Activity")
                             },
@@ -161,6 +172,7 @@ fun App() {
                     "member_status" -> {
                         MemberManagementScreen(
                             state = memberState,
+                            isDarkMode = isDarkMode,
                             onOpenDrawer = {
                                 drawerController.onToggleDrawer(true)
                             },
@@ -181,6 +193,7 @@ fun App() {
                     "balance_sheet" -> {
                         FinanceDashboardScreen(
                             state = financeState,
+                            isDarkMode = isDarkMode,
                             onOpenDrawer = {
                                 drawerController.onToggleDrawer(true)
                             },
@@ -204,6 +217,7 @@ fun App() {
                     else -> {
                         ActivityDashboardScreen(
                             state = activityState,
+                            isDarkMode = isDarkMode,
                             onOpenDrawer = {
                                 drawerController.onToggleDrawer(true)
                             },

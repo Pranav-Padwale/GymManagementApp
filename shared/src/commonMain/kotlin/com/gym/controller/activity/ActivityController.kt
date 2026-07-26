@@ -11,10 +11,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 /**
  * Controller: Dedicated Kotlin class for Member Activity & Nutrition Dashboard.
- * Listens for View callbacks, updates Model, and publishes updated immutable ActivityUiState.
+ * Dynamically computes real-time system date and handles interactive calendar date selection.
  */
 class ActivityController(
     private val repository: ActivityRepository,
@@ -24,9 +26,41 @@ class ActivityController(
     private val _uiState = MutableStateFlow(ActivityUiState())
     val uiState: StateFlow<ActivityUiState> = _uiState.asStateFlow()
 
-    private val monthNames = listOf("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
+    private val monthNames = listOf(
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    )
 
     init {
+        // Initialize with real system current date
+        initRealTimeToday()
+    }
+
+    /**
+     * Set real-time system current date dynamically on launch or when "Jump to Today" is clicked.
+     */
+    fun initRealTimeToday() {
+        val now = LocalDate.now()
+        val day = now.dayOfMonth
+        val month = now.monthValue
+        val year = now.year
+        val mName = monthNames.getOrNull(month - 1) ?: "July"
+        val displayStr = "Today, $day $mName, $year"
+
+        _uiState.update {
+            it.copy(
+                realTodayDay = day,
+                realTodayMonth = month,
+                realTodayYear = year,
+                selectedDay = day,
+                selectedMonth = month,
+                selectedYear = year,
+                calendarViewMonth = month,
+                calendarViewYear = year,
+                selectedDateDisplay = displayStr
+            )
+        }
+
         refreshActivityData()
     }
 
@@ -38,10 +72,11 @@ class ActivityController(
     }
 
     /**
-     * Action handler: User selects a date on the interactive calendar picker.
+     * Action handler: User selects a specific date on the interactive calendar picker.
      */
     fun onCalendarDateSelected(day: Int, month: Int, year: Int) {
-        val isToday = (day == 25 && month == 7 && year == 2026)
+        val now = LocalDate.now()
+        val isToday = (day == now.dayOfMonth && month == now.monthValue && year == now.year)
         val mName = monthNames.getOrNull(month - 1) ?: "July"
         val displayStr = if (isToday) "Today, $day $mName, $year" else "$day $mName, $year"
 
@@ -56,13 +91,12 @@ class ActivityController(
             )
         }
 
-        // Simulate fetching date-specific calorie & nutrition metrics from Model
         scope.launch {
             val dateIso = "$year-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}"
             val calResult = repository.getCalorieData(dateIso)
             val macroResult = repository.getNutritionMacros(dateIso)
 
-            // Dynamic calorie data per date for interactive demonstration
+            // Dynamic date-indexed calorie data for real interactive demonstration
             val dateCalorieData = if (isToday) {
                 calResult.getOrDefault(CalorieData())
             } else {
@@ -102,10 +136,11 @@ class ActivityController(
     }
 
     /**
-     * Action handler: Quick selection for Today (25 July, 2026).
+     * Action handler: Jump to real system Today.
      */
     fun onSelectToday() {
-        onCalendarDateSelected(25, 7, 2026)
+        initRealTimeToday()
+        _uiState.update { it.copy(isCalendarOpen = false) }
     }
 
     /**

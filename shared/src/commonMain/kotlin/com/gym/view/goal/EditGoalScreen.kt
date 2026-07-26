@@ -11,9 +11,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,20 +29,20 @@ import com.gym.controller.goal.GoalUiState
 import com.gym.model.goal.ActivityLevel
 import com.gym.model.goal.Gender
 import com.gym.model.goal.WeightGoal
+import com.gym.view.theme.AppThemeColors
+import com.gym.view.theme.getAppThemeColors
 
-private val DarkBg = Color(0xFF151518)
-private val CardBg = Color(0xFF202024)
 private val OrangeAccent = Color(0xFFFF6D25)
-private val TextMain = Color(0xFFFFFFFF)
-private val TextMuted = Color(0xFFA1A1AA)
 
 /**
  * View (Passive Compose Multiplatform Screen): Edit Goal.
- * Strictly passive UI rendering data from [state] and emitting user inputs to GoalController.
+ * Dynamically adapts colors between Dark Mode and Light Mode.
  */
 @Composable
 fun EditGoalScreen(
     state: GoalUiState,
+    isDarkMode: Boolean = true,
+    onOpenDrawer: () -> Unit,
     onNavigateBack: () -> Unit,
     onGenderSelected: (Gender) -> Unit,
     onAgeChanged: (String) -> Unit,
@@ -53,50 +54,61 @@ fun EditGoalScreen(
     onViewResultClicked: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val theme = getAppThemeColors(isDarkMode)
+
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(DarkBg)
+            .background(theme.bg)
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // 1. Header Bar
+        // 1. Header Bar with Hamburger ☰ & Back Arrow ⬅️
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onNavigateBack, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = TextMain)
+            // Hamburger Menu Trigger ☰
+            IconButton(onClick = onOpenDrawer, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Default.Menu, contentDescription = "Open Hamburger Menu", tint = theme.textMain)
             }
-            Spacer(modifier = Modifier.width(8.dp))
+
+            // Back Arrow Button ⬅️
+            IconButton(onClick = onNavigateBack, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = theme.textMain)
+            }
+
+            Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = "Edit Goal",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextMain
+                color = theme.textMain
             )
         }
 
         // 2. Body Type Selector Section
         Card(
-            colors = CardDefaults.cardColors(containerColor = CardBg),
+            colors = CardDefaults.cardColors(containerColor = theme.cardBg),
             shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().border(1.dp, theme.cardBorder, RoundedCornerShape(16.dp))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(text = "Body Type", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextMain)
+                Text(text = "Body Type", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = theme.textMain)
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     PillSelectionButton(
                         label = "Female",
                         isSelected = state.gender == Gender.FEMALE,
+                        theme = theme,
                         onClick = { onGenderSelected(Gender.FEMALE) },
                         modifier = Modifier.weight(1f)
                     )
                     PillSelectionButton(
                         label = "Male",
                         isSelected = state.gender == Gender.MALE,
+                        theme = theme,
                         onClick = { onGenderSelected(Gender.MALE) },
                         modifier = Modifier.weight(1f)
                     )
@@ -106,9 +118,9 @@ fun EditGoalScreen(
 
         // 3. Personal Info Section
         Card(
-            colors = CardDefaults.cardColors(containerColor = CardBg),
+            colors = CardDefaults.cardColors(containerColor = theme.cardBg),
             shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().border(1.dp, theme.cardBorder, RoundedCornerShape(16.dp))
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
@@ -116,7 +128,7 @@ fun EditGoalScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "Personal Info", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextMain)
+                    Text(text = "Personal Info", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = theme.textMain)
                     Text(
                         text = "Calculate Age",
                         fontSize = 12.sp,
@@ -132,11 +144,11 @@ fun EditGoalScreen(
                     OutlinedTextField(
                         value = state.ageStr,
                         onValueChange = onAgeChanged,
-                        label = { Text("Age", color = TextMuted, fontSize = 11.sp) },
-                        trailingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = TextMuted, modifier = Modifier.size(16.dp)) },
+                        label = { Text("Age", color = theme.textMuted, fontSize = 11.sp) },
+                        trailingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = theme.textMuted, modifier = Modifier.size(16.dp)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextMain, unfocusedTextColor = TextMain, focusedBorderColor = OrangeAccent, unfocusedBorderColor = TextMuted),
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = theme.textMain, unfocusedTextColor = theme.textMain, focusedBorderColor = OrangeAccent, unfocusedBorderColor = theme.textMuted),
                         modifier = Modifier.weight(1f)
                     )
 
@@ -144,11 +156,11 @@ fun EditGoalScreen(
                     OutlinedTextField(
                         value = state.heightStr,
                         onValueChange = onHeightChanged,
-                        label = { Text("My Height (cm)", color = TextMuted, fontSize = 11.sp) },
+                        label = { Text("My Height (cm)", color = theme.textMuted, fontSize = 11.sp) },
                         trailingIcon = { ToggleUnitBadge("cm") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextMain, unfocusedTextColor = TextMain, focusedBorderColor = OrangeAccent, unfocusedBorderColor = TextMuted),
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = theme.textMain, unfocusedTextColor = theme.textMain, focusedBorderColor = OrangeAccent, unfocusedBorderColor = theme.textMuted),
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -158,11 +170,11 @@ fun EditGoalScreen(
                     OutlinedTextField(
                         value = state.weightStr,
                         onValueChange = onWeightChanged,
-                        label = { Text("My Weight (kg)", color = TextMuted, fontSize = 11.sp) },
+                        label = { Text("My Weight (kg)", color = theme.textMuted, fontSize = 11.sp) },
                         trailingIcon = { ToggleUnitBadge("kg") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextMain, unfocusedTextColor = TextMain, focusedBorderColor = OrangeAccent, unfocusedBorderColor = TextMuted),
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = theme.textMain, unfocusedTextColor = theme.textMain, focusedBorderColor = OrangeAccent, unfocusedBorderColor = theme.textMuted),
                         modifier = Modifier.weight(1f)
                     )
 
@@ -170,10 +182,10 @@ fun EditGoalScreen(
                     OutlinedTextField(
                         value = state.goalWeightStr,
                         onValueChange = onGoalWeightChanged,
-                        label = { Text("Goal Weight (kg)", color = TextMuted, fontSize = 11.sp) },
+                        label = { Text("Goal Weight (kg)", color = theme.textMuted, fontSize = 11.sp) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextMain, unfocusedTextColor = TextMain, focusedBorderColor = OrangeAccent, unfocusedBorderColor = TextMuted),
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = theme.textMain, unfocusedTextColor = theme.textMain, focusedBorderColor = OrangeAccent, unfocusedBorderColor = theme.textMuted),
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -184,7 +196,7 @@ fun EditGoalScreen(
                         text = "Your ideal weight range: From ${state.goalResult.idealWeightMinKg.toInt()} KG to ${state.goalResult.idealWeightMaxKg.toInt()} KG",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = TextMain,
+                        color = theme.textMain,
                         modifier = Modifier.weight(1f)
                     )
                     Icon(Icons.Default.Info, contentDescription = null, tint = OrangeAccent, modifier = Modifier.size(18.dp))
@@ -194,12 +206,12 @@ fun EditGoalScreen(
 
         // 4. Body Fat % / BMI Speedometer Gauge Card
         Card(
-            colors = CardDefaults.cardColors(containerColor = CardBg),
+            colors = CardDefaults.cardColors(containerColor = theme.cardBg),
             shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().border(1.dp, theme.cardBorder, RoundedCornerShape(16.dp))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(text = "Body Fat %", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextMain)
+                Text(text = "Body Fat %", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = theme.textMain)
                 Spacer(modifier = Modifier.height(12.dp))
                 BmiGaugeCanvas(bmi = state.goalResult.bmi)
             }
@@ -207,17 +219,18 @@ fun EditGoalScreen(
 
         // 5. Weight Goal Selector (2x2 Grid)
         Card(
-            colors = CardDefaults.cardColors(containerColor = CardBg),
+            colors = CardDefaults.cardColors(containerColor = theme.cardBg),
             shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().border(1.dp, theme.cardBorder, RoundedCornerShape(16.dp))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(text = "Weight Goal", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextMain)
+                Text(text = "Weight Goal", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = theme.textMain)
                 Spacer(modifier = Modifier.height(12.dp))
                 GridSelector(
                     items = WeightGoal.entries,
                     selectedItem = state.weightGoal,
                     displayName = { it.displayName },
+                    theme = theme,
                     onSelect = onWeightGoalSelected
                 )
             }
@@ -225,17 +238,18 @@ fun EditGoalScreen(
 
         // 6. Activity Level Selector (2x2 Grid)
         Card(
-            colors = CardDefaults.cardColors(containerColor = CardBg),
+            colors = CardDefaults.cardColors(containerColor = theme.cardBg),
             shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().border(1.dp, theme.cardBorder, RoundedCornerShape(16.dp))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(text = "Activity Level", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextMain)
+                Text(text = "Activity Level", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = theme.textMain)
                 Spacer(modifier = Modifier.height(12.dp))
                 GridSelector(
                     items = ActivityLevel.entries,
                     selectedItem = state.activityLevel,
                     displayName = { it.displayName },
+                    theme = theme,
                     onSelect = onActivityLevelSelected
                 )
             }
@@ -251,16 +265,16 @@ fun EditGoalScreen(
             if (state.isLoading) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
             } else {
-                Text(text = "View Result", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextMain)
+                Text(text = "View Result", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
             }
         }
 
         // 8. Calculated Macro Results Card
         AnimatedVisibility(visible = state.isResultCalculated) {
             Card(
-                colors = CardDefaults.cardColors(containerColor = CardBg),
+                colors = CardDefaults.cardColors(containerColor = theme.cardBg),
                 shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().border(1.dp, theme.cardBorder, RoundedCornerShape(16.dp))
             ) {
                 Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -274,7 +288,7 @@ fun EditGoalScreen(
                         Text(
                             text = "Below calculations are based on Harris-Benedict equations revised by Mifflin & St Jeor equation 1990",
                             fontSize = 11.sp,
-                            color = TextMuted,
+                            color = theme.textMuted,
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -283,19 +297,19 @@ fun EditGoalScreen(
 
                     // 2x2 Macro Metric Output Grid
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        MacroOutputColumn("Calories", "${state.goalResult.calculatedCalories}", "kcal", modifier = Modifier.weight(1f))
-                        MacroOutputColumn("Fat", "${state.goalResult.calculatedFatGrams}", "Gram Per Day", modifier = Modifier.weight(1f))
+                        MacroOutputColumn("Calories", "${state.goalResult.calculatedCalories}", "kcal", theme = theme, modifier = Modifier.weight(1f))
+                        MacroOutputColumn("Fat", "${state.goalResult.calculatedFatGrams}", "Gram Per Day", theme = theme, modifier = Modifier.weight(1f))
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        MacroOutputColumn("Protein", "${state.goalResult.calculatedProteinGrams}", "Gram Per Day", modifier = Modifier.weight(1f))
-                        MacroOutputColumn("Carbs", "${state.goalResult.calculatedCarbsGrams}", "Gram Per Day", modifier = Modifier.weight(1f))
+                        MacroOutputColumn("Protein", "${state.goalResult.calculatedProteinGrams}", "Gram Per Day", theme = theme, modifier = Modifier.weight(1f))
+                        MacroOutputColumn("Carbs", "${state.goalResult.calculatedCarbsGrams}", "Gram Per Day", theme = theme, modifier = Modifier.weight(1f))
                     }
 
                     Spacer(modifier = Modifier.height(20.dp))
-                    Text(text = "Last Update : ${state.goalResult.lastUpdatedIso}", fontSize = 11.sp, color = TextMuted, fontWeight = FontWeight.Medium)
+                    Text(text = "Last Update : ${state.goalResult.lastUpdatedIso}", fontSize = 11.sp, color = theme.textMuted, fontWeight = FontWeight.Medium)
                 }
             }
         }
@@ -306,17 +320,18 @@ fun EditGoalScreen(
 private fun PillSelectionButton(
     label: String,
     isSelected: Boolean,
+    theme: AppThemeColors,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(8.dp),
-        color = if (isSelected) OrangeAccent else CardBg,
-        modifier = modifier.height(44.dp).border(1.dp, if (isSelected) OrangeAccent else TextMuted, RoundedCornerShape(8.dp))
+        color = if (isSelected) OrangeAccent else theme.cardBg,
+        modifier = modifier.height(44.dp).border(1.dp, if (isSelected) OrangeAccent else theme.textMuted, RoundedCornerShape(8.dp))
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(text = label, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextMain)
+            Text(text = label, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (isSelected) Color.White else theme.textMain)
         }
     }
 }
@@ -326,6 +341,7 @@ private fun <T> GridSelector(
     items: List<T>,
     selectedItem: T,
     displayName: (T) -> String,
+    theme: AppThemeColors,
     onSelect: (T) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -337,11 +353,11 @@ private fun <T> GridSelector(
                     Surface(
                         onClick = { onSelect(item) },
                         shape = RoundedCornerShape(8.dp),
-                        color = if (isSelected) OrangeAccent else CardBg,
-                        modifier = Modifier.weight(1f).height(44.dp).border(1.dp, if (isSelected) OrangeAccent else TextMuted, RoundedCornerShape(8.dp))
+                        color = if (isSelected) OrangeAccent else theme.cardBg,
+                        modifier = Modifier.weight(1f).height(44.dp).border(1.dp, if (isSelected) OrangeAccent else theme.textMuted, RoundedCornerShape(8.dp))
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Text(text = displayName(item), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextMain)
+                            Text(text = displayName(item), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (isSelected) Color.White else theme.textMain)
                         }
                     }
                 }
@@ -355,21 +371,22 @@ private fun MacroOutputColumn(
     label: String,
     value: String,
     unit: String,
+    theme: AppThemeColors,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = label, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextMain)
+        Text(text = label, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = theme.textMain)
         Spacer(modifier = Modifier.height(4.dp))
         Box(modifier = Modifier.width(120.dp).height(2.dp).background(OrangeAccent))
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = value, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = TextMain)
-        Text(text = unit, fontSize = 11.sp, color = TextMuted)
+        Text(text = value, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = theme.textMain)
+        Text(text = unit, fontSize = 11.sp, color = theme.textMuted)
     }
 }
 
 @Composable
 private fun ToggleUnitBadge(unit: String) {
     Surface(shape = RoundedCornerShape(12.dp), color = OrangeAccent) {
-        Text(text = unit, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextMain, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+        Text(text = unit, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
     }
 }
