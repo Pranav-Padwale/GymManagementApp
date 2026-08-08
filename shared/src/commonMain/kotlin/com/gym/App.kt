@@ -11,18 +11,21 @@ import com.gym.controller.drawer.DrawerController
 import com.gym.controller.finance.FinanceController
 import com.gym.controller.goal.GoalController
 import com.gym.controller.member.MemberManagementController
+import com.gym.controller.timeslot.TimeSlotController
 import com.gym.model.activity.ActivityRepositoryImpl
 import com.gym.model.diet.DietPlanRepositoryImpl
 import com.gym.model.drawer.DrawerRepositoryImpl
 import com.gym.model.finance.FinancialRepositoryImpl
 import com.gym.model.goal.GoalRepositoryImpl
 import com.gym.model.member.MemberRepositoryImpl
+import com.gym.model.timeslot.TimeSlotRepositoryImpl
 import com.gym.view.activity.ActivityDashboardScreen
 import com.gym.view.diet.DietPlanScreen
 import com.gym.view.drawer.HamburgerSideDrawer
 import com.gym.view.finance.FinanceDashboardScreen
 import com.gym.view.goal.EditGoalScreen
 import com.gym.view.member.MemberManagementScreen
+import com.gym.view.timeslot.TimeSlotScreen
 import com.gym.view.theme.GymTheme
 import com.gym.view.theme.getAppThemeColors
 
@@ -39,6 +42,7 @@ fun App() {
     val goalRepository = remember { GoalRepositoryImpl() }
     val memberRepository = remember { MemberRepositoryImpl() }
     val financialRepository = remember { FinancialRepositoryImpl() }
+    val timeSlotRepository = remember { TimeSlotRepositoryImpl() }
 
     // Controller Initialization (Standard Kotlin Controllers)
     val drawerController = remember { DrawerController(repository = drawerRepository) }
@@ -47,6 +51,7 @@ fun App() {
     val goalController = remember { GoalController(repository = goalRepository) }
     val memberController = remember { MemberManagementController(repository = memberRepository) }
     val financeController = remember { FinanceController(repository = financialRepository) }
+    val timeSlotController = remember { TimeSlotController(repository = timeSlotRepository) }
 
     // State Collectors
     val drawerState by drawerController.uiState.collectAsState()
@@ -55,6 +60,7 @@ fun App() {
     val goalState by goalController.uiState.collectAsState()
     val memberState by memberController.uiState.collectAsState()
     val financeState by financeController.uiState.collectAsState()
+    val timeSlotState by timeSlotController.uiState.collectAsState()
 
     val isDarkMode = drawerState.profile.isDarkMode
     val appTheme = getAppThemeColors(isDarkMode)
@@ -211,6 +217,69 @@ fun App() {
                             },
                             onRefresh = {
                                 financeController.refreshBalanceSheet()
+                            }
+                        )
+                    }
+                    "time_slot" -> {
+                        TimeSlotScreen(
+                            state = timeSlotState,
+                            isDarkMode = isDarkMode,
+                            onOpenDrawer = {
+                                drawerController.onToggleDrawer(true)
+                            },
+                            onNavigateBack = {
+                                drawerController.onMenuItemClicked("fitness_activity", "Fitness Activity")
+                            },
+                            onDaySelected = { day ->
+                                timeSlotController.onDaySelected(day)
+                            },
+                            onSlotSelected = { slot ->
+                                timeSlotController.onSlotSelected(slot)
+                            },
+                            onToggleCreateDialog = { open ->
+                                timeSlotController.onToggleCreateDialog(open)
+                            },
+                            onCreateSlot = {
+                                timeSlotController.onCreateSlot()
+                            },
+                            onDeleteSlot = { slotId ->
+                                timeSlotController.onDeleteSlot(slotId)
+                            },
+                            onToggleSlotActive = { slotId ->
+                                timeSlotController.onToggleSlotActive(slotId)
+                            },
+                            onCheckInMember = { slotId, memberId ->
+                                timeSlotController.onCheckInMember(slotId, memberId)
+                            },
+                            onCheckOutMember = { attendanceId ->
+                                timeSlotController.onCheckOutMember(attendanceId)
+                            },
+                            onBookSlot = { slotId ->
+                                timeSlotController.onBookSlot(slotId, "M-101", "Alex Rivers")
+                            },
+                            onNewSlotTitleChanged = { value ->
+                                timeSlotController.onNewSlotTitleChanged(value)
+                            },
+                            onNewSlotTrainerChanged = { value ->
+                                timeSlotController.onNewSlotTrainerChanged(value)
+                            },
+                            onNewSlotDayChanged = { day ->
+                                timeSlotController.onNewSlotDayChanged(day)
+                            },
+                            onNewSlotStartTimeChanged = { value ->
+                                timeSlotController.onNewSlotStartTimeChanged(value)
+                            },
+                            onNewSlotEndTimeChanged = { value ->
+                                timeSlotController.onNewSlotEndTimeChanged(value)
+                            },
+                            onNewSlotCapacityChanged = { value ->
+                                timeSlotController.onNewSlotCapacityChanged(value)
+                            },
+                            onNewSlotCategoryChanged = { category ->
+                                timeSlotController.onNewSlotCategoryChanged(category)
+                            },
+                            onClearMessages = {
+                                timeSlotController.onClearMessages()
                             }
                         )
                     }
