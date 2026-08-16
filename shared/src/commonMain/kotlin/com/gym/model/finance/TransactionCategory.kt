@@ -1,8 +1,11 @@
 package com.gym.model.finance
 
+import kotlinx.serialization.Serializable
+
 /**
  * Transaction categories for PT dues, store purchases, administrative expenses, etc.
  */
+@Serializable
 enum class TransactionCategory(val displayName: String, val type: TransactionType) {
     // Income Categories
     MEMBERSHIP_FEE("Membership Subscription Fees", TransactionType.INCOME),

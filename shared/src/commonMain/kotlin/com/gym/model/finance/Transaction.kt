@@ -1,9 +1,12 @@
 package com.gym.model.finance
 
+import kotlinx.serialization.Serializable
+
 /**
  * Domain model representing a financial transaction.
  * Pure Kotlin data layer object.
  */
+@Serializable
 data class Transaction(
     val id: String,
     val title: String,
