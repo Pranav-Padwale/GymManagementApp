@@ -1,9 +1,12 @@
 package com.gym.model.member
 
+import kotlinx.serialization.Serializable
+
 /**
  * Domain model representing a gym member.
  * Completely independent of UI and Controllers.
  */
+@Serializable
 data class Member(
     val id: String,
     val fullName: String,

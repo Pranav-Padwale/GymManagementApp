@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 rootProject.name = "GymManagementApp"
 include(":shared")
 include(":desktopApp")
+include(":server")
