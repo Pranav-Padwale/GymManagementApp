@@ -111,7 +111,7 @@ class TimeSlotRepositoryImpl : TimeSlotRepository {
 
     override suspend fun createSlot(slot: TimeSlot): Result<TimeSlot> = withContext(Dispatchers.IO) {
         try {
-            val newSlot = slot.copy(id = "TS-${String.format("%03d", nextSlotId++)}")
+            val newSlot = slot.copy(id = "TS-${(nextSlotId++).toString().padStart(3, '0')}")
             slotsDb.add(newSlot)
             Result.success(newSlot)
         } catch (e: Exception) {
@@ -202,7 +202,7 @@ class TimeSlotRepositoryImpl : TimeSlotRepository {
             }
 
             val record = AttendanceRecord(
-                id = "ATT-${String.format("%03d", nextAttendanceId++)}",
+                id = "ATT-${(nextAttendanceId++).toString().padStart(3, '0')}",
                 slotId = slotId,
                 memberId = memberId,
                 memberName = memberName,

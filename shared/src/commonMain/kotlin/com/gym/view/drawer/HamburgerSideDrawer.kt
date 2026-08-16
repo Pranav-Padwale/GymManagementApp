@@ -36,8 +36,8 @@ import androidx.compose.ui.unit.sp
 import com.gym.controller.drawer.DrawerUiState
 import com.gym.model.drawer.DrawerMenuItem
 
-// Dynamic Palette Tokens for Dark / Light Modes
-private val OrangeAvatarBg = Color(0xFFFF6D25)
+// Dynamic Palette Tokens for Dark / Light Modes matching Stitch Kinetic Obsidian
+private val BrandIndigo = Color(0xFF6366F1)
 
 /**
  * View (Passive Compose Multiplatform Side Drawer): Hamburger Navigation Drawer matching mockup image.
@@ -54,11 +54,11 @@ fun HamburgerSideDrawer(
     val isDark = state.profile.isDarkMode
 
     // Dynamic Colors depending on Dark / Light Mode state
-    val drawerBg = if (isDark) Color(0xFF1E1E22) else Color(0xFFF8FAFC)
-    val cardBg = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
-    val dividerColor = if (isDark) Color(0xFF3F3F46) else Color(0xFFCBD5E1)
-    val textMain = if (isDark) Color(0xFFFFFFFF) else Color(0xFF0F172A)
-    val textMuted = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val drawerBg = if (isDark) Color(0xFF0B1326) else Color(0xFFF8FAFC)
+    val cardBg = if (isDark) Color(0xFF171F33) else Color(0xFFE2E8F0)
+    val dividerColor = if (isDark) Color(0xFF222A3D) else Color(0xFFCBD5E1)
+    val textMain = if (isDark) Color(0xFFDAE2FD) else Color(0xFF0F172A)
+    val textMuted = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
 
     val drawerState = rememberDrawerState(
         initialValue = if (state.isOpen) DrawerValue.Open else DrawerValue.Closed
@@ -84,12 +84,14 @@ fun HamburgerSideDrawer(
             ModalDrawerSheet(
                 drawerContainerColor = drawerBg,
                 drawerShape = RoundedCornerShape(topEnd = 0.dp, bottomEnd = 0.dp),
-                modifier = Modifier.width(300.dp).fillMaxHeight()
+                modifier = Modifier.widthIn(max = 320.dp).fillMaxWidth(0.85f).fillMaxHeight()
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(drawerBg)
+                        .statusBarsPadding()
+                        .navigationBarsPadding()
                         .padding(20.dp)
                 ) {
                     // 1. User Profile Header Section
@@ -99,17 +101,17 @@ fun HamburgerSideDrawer(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            // Large Orange Avatar Circle
+                            // Large Indigo Avatar Circle
                             Box(
                                 modifier = Modifier
-                                    .size(56.dp)
-                                    .clip(CircleShape)
-                                    .background(OrangeAvatarBg),
+                                    .size(52.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(BrandIndigo),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = state.profile.name.take(1).uppercase(),
-                                    fontSize = 24.sp,
+                                    fontSize = 22.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
                                 )
@@ -120,7 +122,7 @@ fun HamburgerSideDrawer(
                             Column {
                                 Text(
                                     text = state.profile.name,
-                                    fontSize = 18.sp,
+                                    fontSize = 17.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = textMain
                                 )
@@ -137,23 +139,23 @@ fun HamburgerSideDrawer(
                         Surface(
                             onClick = onToggleTheme,
                             shape = CircleShape,
-                            color = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0),
-                            modifier = Modifier.size(40.dp)
+                            color = if (isDark) Color(0xFF1E293B) else Color(0xFFE2E8F0),
+                            modifier = Modifier.size(38.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     imageVector = if (isDark) Icons.Default.DarkMode else Icons.Default.LightMode,
                                     contentDescription = "Toggle Theme Mode",
-                                    tint = if (isDark) Color(0xFFFFD54F) else OrangeAvatarBg,
-                                    modifier = Modifier.size(22.dp)
+                                    tint = if (isDark) Color(0xFFFFD54F) else BrandIndigo,
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
                     HorizontalDivider(color = dividerColor)
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     // 2. Menu Items List
                     LazyColumn(
@@ -177,7 +179,7 @@ fun HamburgerSideDrawer(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = state.appVersion,
+                            text = "FORGE • ${state.appVersion}",
                             fontSize = 11.sp,
                             color = textMuted,
                             fontWeight = FontWeight.Medium
@@ -207,21 +209,21 @@ private fun DrawerItemRow(
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = item.title,
-                tint = if (isSelected) OrangeAvatarBg else textMain,
-                modifier = Modifier.size(22.dp)
+                tint = if (isSelected) BrandIndigo else textMain,
+                modifier = Modifier.size(20.dp)
             )
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(14.dp))
             Text(
                 text = item.title,
                 fontSize = 14.sp,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = if (isSelected) OrangeAvatarBg else textMain
+                color = if (isSelected) BrandIndigo else textMain
             )
         }
     }
@@ -229,6 +231,7 @@ private fun DrawerItemRow(
 
 private fun getIconForMenuItem(itemId: String): ImageVector {
     return when (itemId) {
+        "admin_dashboard" -> Icons.Default.AccountBalance
         "fitness_activity" -> Icons.Default.TrackChanges
         "member_status" -> Icons.Default.People
         "balance_sheet" -> Icons.Default.AccountBalance

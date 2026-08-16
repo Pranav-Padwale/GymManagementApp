@@ -47,7 +47,7 @@ class DietPlanController(
 
     fun onAddFoodItem(name: String, quantityGrams: Double, calories: Double, category: MealCategory) {
         val newFood = FoodItem(
-            id = "FOOD-${System.currentTimeMillis()}",
+            id = "FOOD-${kotlin.random.Random.nextLong(100000, 999999)}",
             name = name,
             quantityGrams = quantityGrams,
             calories = calories,

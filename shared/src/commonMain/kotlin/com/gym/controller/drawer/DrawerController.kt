@@ -76,8 +76,10 @@ class DrawerController(
         filterMenuItems()
         
         // Also route them to the best default page based on role
-        if (role == UserRole.MEMBER) {
-            onMenuItemClicked("time_slot", "Time Slots")
+        when (role) {
+            UserRole.SUPER_ADMIN -> onMenuItemClicked("admin_dashboard", "Executive Dashboard")
+            UserRole.TRAINER -> onMenuItemClicked("member_status", "Member Status Directory")
+            UserRole.MEMBER -> onMenuItemClicked("time_slot", "Time Slots")
         }
     }
 
@@ -94,8 +96,8 @@ class DrawerController(
             when (role) {
                 UserRole.SUPER_ADMIN -> true // Admin sees everything
                 UserRole.TRAINER -> {
-                    // Trainer cannot see finances
-                    item.id != "balance_sheet"
+                    // Trainer cannot see finances or executive dashboard
+                    item.id !in listOf("balance_sheet", "admin_dashboard")
                 }
                 UserRole.MEMBER -> {
                     // Member can only see profile/dashboard, time slots, and diet

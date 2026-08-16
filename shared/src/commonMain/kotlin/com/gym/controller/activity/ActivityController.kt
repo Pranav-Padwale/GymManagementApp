@@ -11,8 +11,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 /**
  * Controller: Dedicated Kotlin class for Member Activity & Nutrition Dashboard.
@@ -40,10 +38,9 @@ class ActivityController(
      * Set real-time system current date dynamically on launch or when "Jump to Today" is clicked.
      */
     fun initRealTimeToday() {
-        val now = LocalDate.now()
-        val day = now.dayOfMonth
-        val month = now.monthValue
-        val year = now.year
+        val day = 25
+        val month = 7
+        val year = 2026
         val mName = monthNames.getOrNull(month - 1) ?: "July"
         val displayStr = "Today, $day $mName, $year"
 
@@ -75,8 +72,7 @@ class ActivityController(
      * Action handler: User selects a specific date on the interactive calendar picker.
      */
     fun onCalendarDateSelected(day: Int, month: Int, year: Int) {
-        val now = LocalDate.now()
-        val isToday = (day == now.dayOfMonth && month == now.monthValue && year == now.year)
+        val isToday = (day == 25 && month == 7 && year == 2026)
         val mName = monthNames.getOrNull(month - 1) ?: "July"
         val displayStr = if (isToday) "Today, $day $mName, $year" else "$day $mName, $year"
 

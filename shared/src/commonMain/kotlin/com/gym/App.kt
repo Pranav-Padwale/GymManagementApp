@@ -97,6 +97,21 @@ fun App() {
                         .background(appTheme.bg)
                 ) {
                     when (drawerState.selectedMenuItemId) {
+                        "admin_dashboard" -> {
+                            com.gym.view.admin.AdminExecutiveDashboardScreen(
+                                memberState = memberState,
+                                financeState = financeState,
+                                timeSlotState = timeSlotState,
+                                isDarkMode = isDarkMode,
+                                onNavigateToMembers = { drawerController.onMenuItemClicked("member_status", "Member Status Directory") },
+                                onNavigateToFinance = { drawerController.onMenuItemClicked("balance_sheet", "Income & Expense Sheet") },
+                                onNavigateToClasses = { drawerController.onMenuItemClicked("time_slot", "Time Slot") },
+                                onNavigateToActivity = { drawerController.onMenuItemClicked("fitness_activity", "Fitness Activity") },
+                                onOpenDrawer = { drawerController.onToggleDrawer(true) },
+                                onToggleTheme = { drawerController.onToggleTheme() },
+                                onLogout = { session = null }
+                            )
+                        }
                         "fitness_activity" -> {
                             ActivityDashboardScreen(
                                 state = activityState,
@@ -152,6 +167,9 @@ fun App() {
                                 },
                                 onCameraIconClicked = { category ->
                                     dietPlanController.onCameraIconClicked(category)
+                                },
+                                onAddFoodItem = { name, grams, cal, cat ->
+                                    dietPlanController.onAddFoodItem(name, grams, cal, cat)
                                 },
                                 onRemoveFoodItem = { foodId ->
                                     dietPlanController.onRemoveFoodItem(foodId)
@@ -209,6 +227,9 @@ fun App() {
                                 },
                                 onUpdateMemberStatus = { memberId, newStatus ->
                                     memberController.onUpdateMemberStatus(memberId, newStatus)
+                                },
+                                onAddMember = { newMember ->
+                                    memberController.onAddMember(newMember)
                                 },
                                 onRefresh = {
                                     memberController.refreshMembers()
