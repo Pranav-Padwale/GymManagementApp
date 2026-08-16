@@ -34,5 +34,6 @@ Thumbs.db
 Desktop.ini
 ehthumbs.db
 
-# Log files
+# Log files & heap dumps
 *.log
+*.hprof

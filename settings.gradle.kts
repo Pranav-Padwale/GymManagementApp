@@ -17,3 +17,4 @@ rootProject.name = "GymManagementApp"
 include(":shared")
 include(":desktopApp")
 include(":server")
+include(":androidApp")

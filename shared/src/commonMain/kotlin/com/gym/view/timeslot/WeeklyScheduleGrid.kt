@@ -13,8 +13,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gym.model.timeslot.DayOfWeek
@@ -45,6 +48,8 @@ fun WeeklyScheduleGrid(
     isDarkMode: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val textMeasurer = rememberTextMeasurer()
+
     Card(
         colors = CardDefaults.cardColors(containerColor = theme.cardBg),
         shape = RoundedCornerShape(14.dp),
@@ -68,6 +73,7 @@ fun WeeklyScheduleGrid(
             ) {
                 drawWeeklyGrid(
                     allSlots = allSlots,
+                    textMeasurer = textMeasurer,
                     isDarkMode = isDarkMode,
                     textColor = theme.textMain,
                     gridLineColor = theme.dividerColor,
@@ -107,6 +113,7 @@ fun WeeklyScheduleGrid(
  */
 private fun DrawScope.drawWeeklyGrid(
     allSlots: List<TimeSlot>,
+    textMeasurer: TextMeasurer,
     isDarkMode: Boolean,
     textColor: Color,
     gridLineColor: Color,
@@ -125,14 +132,12 @@ private fun DrawScope.drawWeeklyGrid(
     // Draw day headers (Mon, Tue, ... Sun)
     DayOfWeek.entries.forEachIndexed { index, day ->
         val x = leftMargin + (index * columnWidth) + (columnWidth / 2)
-        drawContext.canvas.nativeCanvas.apply {
-            drawString(
-                day.short,
-                x - 10f,
-                14f,
-                mutedTextColor
-            )
-        }
+        drawText(
+            textMeasurer = textMeasurer,
+            text = day.short,
+            topLeft = Offset(x - 10f, 2f),
+            style = TextStyle(fontSize = 10.sp, color = mutedTextColor)
+        )
     }
 
     // Draw horizontal time grid lines (every 4 hours for clarity)
@@ -151,9 +156,12 @@ private fun DrawScope.drawWeeklyGrid(
 
         // Time label
         val label = if (hour <= 12) "${hour}a" else "${hour - 12}p"
-        drawContext.canvas.nativeCanvas.apply {
-            drawString(label, 2f, y + 4f, mutedTextColor)
-        }
+        drawText(
+            textMeasurer = textMeasurer,
+            text = label,
+            topLeft = Offset(2f, y - 6f),
+            style = TextStyle(fontSize = 9.sp, color = mutedTextColor)
+        )
     }
 
     // Draw vertical column dividers
@@ -215,29 +223,4 @@ private fun parseTimeToFraction(timeStr: String, startHour: Int, totalHours: Int
     } catch (e: Exception) {
         null
     }
-}
-
-/**
- * Extension to draw simple text on a native canvas.
- * Uses a basic approach compatible with JVM desktop Compose.
- */
-private fun org.jetbrains.skia.Canvas.drawString(
-    text: String,
-    x: Float,
-    y: Float,
-    color: Color
-) {
-    val paint = org.jetbrains.skia.Paint().apply {
-        this.color = org.jetbrains.skia.Color.makeARGB(
-            (color.alpha * 255).toInt(),
-            (color.red * 255).toInt(),
-            (color.green * 255).toInt(),
-            (color.blue * 255).toInt()
-        )
-        isAntiAlias = true
-    }
-    val font = org.jetbrains.skia.Font().apply {
-        this.size = 10f
-    }
-    drawString(text, x, y, font, paint)
 }
