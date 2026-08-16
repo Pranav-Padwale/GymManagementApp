@@ -113,7 +113,7 @@ class FinancialRepositoryImpl(
         year: Int
     ): Result<Unit> {
         val newTx = Transaction(
-            id = "TX-${System.currentTimeMillis()}",
+            id = "TX-${kotlin.random.Random.nextLong(100000, 999999)}",
             title = title,
             amount = amount,
             category = category,

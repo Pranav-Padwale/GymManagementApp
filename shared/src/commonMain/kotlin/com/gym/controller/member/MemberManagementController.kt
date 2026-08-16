@@ -1,5 +1,6 @@
 package com.gym.controller.member
 
+import com.gym.model.member.Member
 import com.gym.model.member.MemberRepository
 import com.gym.model.member.MemberStatus
 import kotlinx.coroutines.CoroutineScope
@@ -54,6 +55,29 @@ class MemberManagementController(
                         it.copy(
                             isLoading = false,
                             errorMessage = "Failed to update status: ${error.message}"
+                        )
+                    }
+                }
+            )
+        }
+    }
+
+    /**
+     * User action handler: Add a new member and refresh state.
+     */
+    fun onAddMember(member: Member) {
+        scope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            val result = repository.addMember(member)
+            result.fold(
+                onSuccess = {
+                    fetchMembersForFilter(_uiState.value.selectedFilter)
+                },
+                onFailure = { error ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = "Failed to add member: ${error.message}"
                         )
                     }
                 }

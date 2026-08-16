@@ -37,3 +37,7 @@ ehthumbs.db
 # Log files & heap dumps
 *.log
 *.hprof
+
+# Local server database directory
+server/data/
+data/

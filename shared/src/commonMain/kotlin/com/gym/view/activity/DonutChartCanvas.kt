@@ -1,7 +1,9 @@
 package com.gym.view.activity
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material3.Icon
@@ -9,17 +11,20 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.gym.view.theme.GymAccentPrimary
 import com.gym.view.theme.GymTextPrimary
 import com.gym.view.theme.GymTextSecondary
 
 /**
- * Custom Canvas Rendering for the Multi-color Calorie Donut Ring matching the screenshot.
+ * Custom Canvas Rendering for the Multi-color Calorie Donut Ring matching Stitch design.
  */
 @Composable
 fun DonutChartCanvas(
@@ -29,59 +34,89 @@ fun DonutChartCanvas(
     fatPercentage: Float = 0.15f,
     modifier: Modifier = Modifier
 ) {
-    val orangeColor = Color(0xFFFF5722) // Carbs / Target
-    val blueColor = Color(0xFF2196F3)   // Protein
-    val greenColor = Color(0xFF76FF03)  // Fat
+    val carbsColor = Color(0xFF6366F1) // Electric Indigo
+    val proteinColor = Color(0xFF4EDEA3) // Emerald Green
+    val fatColor = Color(0xFFFF5451) // Coral Red
+    val trackBgColor = Color(0xFF222A3D) // Subtle dark track
 
     Box(
-        modifier = modifier.size(190.dp),
+        modifier = modifier.size(210.dp),
         contentAlignment = Alignment.Center
     ) {
+        // Radial glow behind the donut
+        Box(
+            modifier = Modifier
+                .size(160.dp)
+                .clip(CircleShape)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(GymAccentPrimary.copy(alpha = 0.25f), Color.Transparent)
+                    )
+                )
+        )
+
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val strokeWidth = 26.dp.toPx()
+            val strokeWidth = 20.dp.toPx()
             val diameter = size.minDimension - strokeWidth
             val topLeft = androidx.compose.ui.geometry.Offset(strokeWidth / 2, strokeWidth / 2)
             val arcSize = androidx.compose.ui.geometry.Size(diameter, diameter)
 
+            // 1. Draw full background track
+            drawArc(
+                color = trackBgColor,
+                startAngle = 0f,
+                sweepAngle = 360f,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+            )
+
             var startAngle = -90f
 
-            // Orange Arc (Carbs / 60%)
+            // 2. Carbs Arc (Indigo / 60%)
             val carbsSweep = 360f * carbsPercentage
-            drawArc(
-                color = orangeColor,
-                startAngle = startAngle,
-                sweepAngle = carbsSweep - 4f,
-                useCenter = false,
-                topLeft = topLeft,
-                size = arcSize,
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-            )
-            startAngle += carbsSweep
+            if (carbsSweep > 0) {
+                drawArc(
+                    color = carbsColor,
+                    startAngle = startAngle,
+                    sweepAngle = carbsSweep - 4f,
+                    useCenter = false,
+                    topLeft = topLeft,
+                    size = arcSize,
+                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                )
+                startAngle += carbsSweep
+            }
 
-            // Blue Arc (Protein / 25%)
+            // 3. Protein Arc (Emerald / 25%)
             val proteinSweep = 360f * proteinPercentage
-            drawArc(
-                color = blueColor,
-                startAngle = startAngle,
-                sweepAngle = proteinSweep - 4f,
-                useCenter = false,
-                topLeft = topLeft,
-                size = arcSize,
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-            )
-            startAngle += proteinSweep
+            if (proteinSweep > 0) {
+                drawArc(
+                    color = proteinColor,
+                    startAngle = startAngle,
+                    sweepAngle = proteinSweep - 4f,
+                    useCenter = false,
+                    topLeft = topLeft,
+                    size = arcSize,
+                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                )
+                startAngle += proteinSweep
+            }
 
-            // Green Arc (Fat / 15%)
+            // 4. Fat Arc (Coral Red / 15%)
             val fatSweep = 360f * fatPercentage
-            drawArc(
-                color = greenColor,
-                startAngle = startAngle,
-                sweepAngle = fatSweep - 4f,
-                useCenter = false,
-                topLeft = topLeft,
-                size = arcSize,
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-            )
+            if (fatSweep > 0) {
+                drawArc(
+                    color = fatColor,
+                    startAngle = startAngle,
+                    sweepAngle = fatSweep - 4f,
+                    useCenter = false,
+                    topLeft = topLeft,
+                    size = arcSize,
+                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                )
+            }
         }
 
         // Center Content
@@ -89,21 +124,24 @@ fun DonutChartCanvas(
             Icon(
                 imageVector = Icons.Default.LocalFireDepartment,
                 contentDescription = null,
-                tint = orangeColor,
-                modifier = Modifier.size(32.dp)
+                tint = GymAccentPrimary,
+                modifier = Modifier.size(28.dp)
             )
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = "$caloriesLeft",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = GymTextPrimary
+                text = "${caloriesLeft.toInt()}",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = GymTextPrimary,
+                letterSpacing = (-0.5).sp
             )
             Text(
                 text = "Calories left",
                 fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Medium,
                 color = GymTextSecondary
             )
         }
     }
 }
+

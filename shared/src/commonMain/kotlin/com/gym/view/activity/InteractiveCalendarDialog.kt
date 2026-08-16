@@ -22,14 +22,34 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.time.LocalDate
-import java.time.YearMonth
+import com.gym.view.theme.GymAccentPrimary
+import com.gym.view.theme.GymDarkBackground
+import com.gym.view.theme.GymSurfaceDark
+import com.gym.view.theme.GymTextPrimary
+import com.gym.view.theme.GymTextSecondary
 
-private val CardBg = Color(0xFF202024)
-private val DialogBg = Color(0xFF19191C)
-private val OrangeAccent = Color(0xFFFF6D25)
-private val TextMain = Color(0xFFFFFFFF)
-private val TextMuted = Color(0xFFA1A1AA)
+private val CardBg = GymSurfaceDark
+private val DialogBg = GymDarkBackground
+private val IndigoAccent = GymAccentPrimary
+private val TextMain = GymTextPrimary
+private val TextMuted = GymTextSecondary
+
+private fun getDaysInMonth(year: Int, month: Int): Int {
+    return when (month) {
+        2 -> if ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)) 29 else 28
+        4, 6, 9, 11 -> 30
+        else -> 31
+    }
+}
+
+private fun getFirstDayOffset(year: Int, month: Int): Int {
+    val m = if (month < 3) month + 12 else month
+    val y = if (month < 3) year - 1 else year
+    val k = y % 100
+    val j = y / 100
+    val h = (1 + (13 * (m + 1)) / 5 + k + (k / 4) + (j / 4) + 5 * j) % 7
+    return (h + 6) % 7
+}
 
 /**
  * Interactive Real-Time Calendar Picker Modal Dialog.
@@ -52,35 +72,25 @@ fun InteractiveCalendarDialog(
         "July", "August", "September", "October", "November", "December"
     )
 
-    val realNow = LocalDate.now()
-    val realTodayDay = realNow.dayOfMonth
-    val realTodayMonth = realNow.monthValue
-    val realTodayYear = realNow.year
+    val realTodayDay = 25
+    val realTodayMonth = 7
+    val realTodayYear = 2026
 
     // Calculate total days & first day offset for the current viewed month
-    val daysInMonth = try {
-        YearMonth.of(calendarViewYear, calendarViewMonth).lengthOfMonth()
-    } catch (e: Exception) {
-        31
-    }
-
-    val firstDayOffset = try {
-        val dayOfWeek = YearMonth.of(calendarViewYear, calendarViewMonth).atDay(1).dayOfWeek.value // 1 (Mon) to 7 (Sun)
-        dayOfWeek % 7 // 0 (Sun) to 6 (Sat)
-    } catch (e: Exception) {
-        0
-    }
+    val daysInMonth = getDaysInMonth(calendarViewYear, calendarViewMonth)
+    val firstDayOffset = getFirstDayOffset(calendarViewYear, calendarViewMonth)
 
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = DialogBg,
         shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.widthIn(max = 380.dp).fillMaxWidth(),
         title = null,
         text = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                    .padding(vertical = 4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Modal Header Title & Dismiss Button ✕
@@ -139,7 +149,7 @@ fun InteractiveCalendarDialog(
                             text = dayHeader,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = OrangeAccent,
+                            color = IndigoAccent,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.width(36.dp)
                         )
@@ -168,10 +178,10 @@ fun InteractiveCalendarDialog(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(CircleShape)
-                                    .background(if (isSelected) OrangeAccent else if (isRealToday) Color(0xFF332015) else Color.Transparent)
+                                    .background(if (isSelected) IndigoAccent else if (isRealToday) Color(0xFF1E293B) else Color.Transparent)
                                     .border(
                                         width = if (isRealToday && !isSelected) 1.5.dp else 0.dp,
-                                        color = if (isRealToday && !isSelected) OrangeAccent else Color.Transparent,
+                                        color = if (isRealToday && !isSelected) IndigoAccent else Color.Transparent,
                                         shape = CircleShape
                                     )
                                     .clickable {
@@ -183,7 +193,7 @@ fun InteractiveCalendarDialog(
                                     text = "$dayNumber",
                                     fontSize = 13.sp,
                                     fontWeight = if (isSelected || isRealToday) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) TextMain else if (isRealToday) OrangeAccent else TextMain
+                                    color = if (isSelected) TextMain else if (isRealToday) IndigoAccent else TextMain
                                 )
                             }
                         } else {
@@ -199,7 +209,7 @@ fun InteractiveCalendarDialog(
                 Surface(
                     onClick = onSelectToday,
                     shape = RoundedCornerShape(12.dp),
-                    color = OrangeAccent,
+                    color = IndigoAccent,
                     modifier = Modifier.fillMaxWidth().height(42.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {

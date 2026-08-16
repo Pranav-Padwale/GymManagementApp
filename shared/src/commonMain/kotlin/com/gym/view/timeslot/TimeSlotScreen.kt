@@ -8,51 +8,36 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gym.controller.timeslot.TimeSlotUiState
 import com.gym.model.timeslot.*
 import com.gym.view.theme.*
 
-// Slot Category Color Mapping
-private fun getCategoryColor(category: SlotCategory): Color = when (category) {
-    SlotCategory.YOGA -> Color(0xFF14B8A6)       // Teal
-    SlotCategory.CARDIO -> Color(0xFFF97316)      // Orange
-    SlotCategory.STRENGTH -> Color(0xFF3B82F6)    // Blue
-    SlotCategory.CROSSFIT -> Color(0xFFEF4444)    // Red
-    SlotCategory.ZUMBA -> Color(0xFFA855F7)       // Purple
-    SlotCategory.OPEN_GYM -> Color(0xFF6366F1)    // Indigo
-}
-
-private fun getStatusColor(status: AttendanceStatus): Color = when (status) {
-    AttendanceStatus.BOOKED -> Color(0xFFF59E0B)     // Amber
-    AttendanceStatus.CHECKED_IN -> Color(0xFF10B981)  // Emerald
-    AttendanceStatus.CHECKED_OUT -> Color(0xFF6366F1) // Indigo
-    AttendanceStatus.NO_SHOW -> Color(0xFFEF4444)     // Red
-}
-
 /**
- * View (Passive Compose Multiplatform Screen): Time Slot & Attendance Management.
- * Renders weekly day tabs, slot cards with capacity progress, attendance panels,
- * and a create-slot modal dialog. Dynamically adapts between Dark / Light mode.
+ * View: Time Slot & Live Class Schedule matching Google Stitch ("Elite Gym Management Pro").
+ * Supports weekly day navigation, real-time booking capacity meters, attendance rosters, and slot creation.
  */
 @Composable
 fun TimeSlotScreen(
@@ -81,155 +66,222 @@ fun TimeSlotScreen(
 ) {
     val theme = getAppThemeColors(isDarkMode)
 
-    Box(modifier = modifier.fillMaxSize()) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(theme.bg)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(theme.bg)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // ─── 1. Navigation Header ───
-            NavigationHeader(theme, onOpenDrawer, onNavigateBack, state)
+            // 1. Navigation Header
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f, fill = false),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    IconButton(
+                        onClick = onOpenDrawer,
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(theme.cardBg)
+                            .border(1.dp, theme.cardBorder, CircleShape)
+                    ) {
+                        Icon(Icons.Default.Menu, contentDescription = "Menu", tint = theme.textMain)
+                    }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                    IconButton(
+                        onClick = onNavigateBack,
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(theme.cardBg)
+                            .border(1.dp, theme.cardBorder, CircleShape)
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = theme.textMain)
+                    }
 
-            // ─── 2. Summary Stats Banner ───
-            SummaryStatsBanner(theme, isDarkMode, state)
+                    Column(modifier = Modifier.weight(1f, fill = false)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = "Class Schedule",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = theme.textMain,
+                                maxLines = 1
+                            )
+                            Surface(
+                                color = GymAccentPrimary.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text(
+                                    text = "${state.daySlots.size}",
+                                    color = GymAccentPrimary,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                        Text(
+                            text = "Attendance & coaching schedule",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = theme.textMuted,
+                            maxLines = 1
+                        )
+                    }
+                }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = { onToggleCreateDialog(true) },
+                    colors = ButtonDefaults.buttonColors(containerColor = GymAccentPrimary),
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                    modifier = Modifier.height(38.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Add", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.White)
+                }
+            }
 
-            // ─── 3. Weekly Day Tabs ───
-            WeeklyDayTabs(theme, isDarkMode, state, onDaySelected)
+            // 2. Weekly Day Selector Tabs (Mon, Tue, Wed, Thu, Fri, Sat, Sun)
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(DayOfWeek.entries) { day ->
+                    val isSelected = state.selectedDay == day
+                    val slotCountForDay = state.allSlots.count { it.dayOfWeek == day }
+                    Surface(
+                        onClick = { onDaySelected(day) },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) GymAccentPrimary else theme.cardBg,
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (isSelected) GymAccentPrimary else theme.cardBorder
+                        ),
+                        modifier = Modifier.width(82.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 6.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = day.short,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSelected) Color.White else theme.textMain
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "$slotCountForDay slots",
+                                fontSize = 10.sp,
+                                color = if (isSelected) Color.White.copy(alpha = 0.8f) else theme.textMuted
+                            )
+                        }
+                    }
+                }
+            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            // 3. Telemetry KPI Strip (Horizontally scrollable for small screens)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                val totalCap = state.daySlots.sumOf { it.maxCapacity }
+                val totalBooked = state.daySlots.sumOf { it.currentBookings }
+                val occupancyPct = if (totalCap > 0) (totalBooked.toFloat() / totalCap * 100).toInt() else 0
 
-            // ─── 4. Success/Error Messages ───
+                KpiMiniCard("Total Capacity", "$totalCap spots", Icons.Default.Groups, theme)
+                KpiMiniCard("Active Bookings", "$totalBooked booked", Icons.Default.EventAvailable, theme)
+                KpiMiniCard("Occupancy Rate", "$occupancyPct%", Icons.AutoMirrored.Filled.TrendingUp, theme)
+            }
+
+            // 4. Notifications / Alerts
             AnimatedVisibility(
                 visible = state.successMessage != null,
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically()
+                enter = fadeIn(),
+                exit = fadeOut()
             ) {
                 state.successMessage?.let { msg ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                        colors = CardDefaults.cardColors(containerColor = GymAccentSecondary.copy(alpha = 0.15f)),
-                        shape = RoundedCornerShape(8.dp)
+                    Surface(
+                        color = GymAccentSecondary.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(10.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, GymAccentSecondary.copy(alpha = 0.4f)),
+                        modifier = Modifier.fillMaxWidth().clickable { onClearMessages() }
                     ) {
                         Row(
-                            modifier = Modifier.padding(12.dp).clickable { onClearMessages() },
-                            verticalAlignment = Alignment.CenterVertically
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = GymAccentSecondary, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = msg, color = GymAccentSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                            Icon(Icons.Default.Close, contentDescription = "Dismiss", tint = GymAccentSecondary, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = GymAccentSecondary, modifier = Modifier.size(16.dp))
+                            Text(msg, color = GymAccentSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                            Icon(Icons.Default.Close, contentDescription = "Dismiss", tint = GymAccentSecondary, modifier = Modifier.size(14.dp))
                         }
                     }
                 }
             }
 
-            AnimatedVisibility(
-                visible = state.errorMessage != null,
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically()
-            ) {
-                state.errorMessage?.let { error ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                        colors = CardDefaults.cardColors(containerColor = GymAccentDanger.copy(alpha = 0.15f)),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp).clickable { onClearMessages() },
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.Warning, contentDescription = null, tint = GymAccentDanger, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = error, color = GymAccentDanger, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                            Icon(Icons.Default.Close, contentDescription = "Dismiss", tint = GymAccentDanger, modifier = Modifier.size(16.dp))
-                        }
-                    }
-                }
-            }
-
-            // ─── 5. Slot Cards List ───
+            // 5. Scrollable Class Schedule Bento List
             if (state.isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = GymAccentPrimary)
                 }
             } else if (state.daySlots.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(text = "🏖️", fontSize = 48.sp)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "No slots scheduled for ${state.selectedDay.full}",
-                            color = theme.textMuted,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Tap + to create a new time slot",
-                            color = theme.textMuted.copy(alpha = 0.6f),
-                            fontSize = 12.sp
-                        )
+                        Icon(Icons.Default.EventBusy, contentDescription = null, tint = theme.textMuted, modifier = Modifier.size(48.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text("No classes scheduled for ${state.selectedDay.full}", color = theme.textMuted, fontSize = 15.sp)
                     }
                 }
             } else {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.fillMaxSize()
                 ) {
                     items(state.daySlots, key = { it.id }) { slot ->
-                        SlotCard(
+                        val isExpanded = state.selectedSlot?.id == slot.id && state.isAttendanceExpanded
+                        ClassSlotBentoCard(
                             slot = slot,
-                            theme = theme,
-                            isDarkMode = isDarkMode,
-                            isExpanded = state.selectedSlot?.id == slot.id && state.isAttendanceExpanded,
+                            isExpanded = isExpanded,
                             attendanceRecords = if (state.selectedSlot?.id == slot.id) state.attendanceRecords else emptyList(),
+                            theme = theme,
                             onSlotClicked = { onSlotSelected(slot) },
-                            onDeleteSlot = { onDeleteSlot(slot.id) },
-                            onToggleActive = { onToggleSlotActive(slot.id) },
-                            onCheckIn = { memberId -> onCheckInMember(slot.id, memberId) },
-                            onCheckOut = { attendanceId -> onCheckOutMember(attendanceId) },
-                            onBook = { onBookSlot(slot.id) }
+                            onBook = { onBookSlot(slot.id) },
+                            onDelete = { onDeleteSlot(slot.id) },
+                            onCheckIn = { memId -> onCheckInMember(slot.id, memId) },
+                            onCheckOut = { attId -> onCheckOutMember(attId) }
                         )
                     }
-
-                    item { Spacer(modifier = Modifier.height(72.dp)) }
                 }
             }
         }
 
-        // ─── 6. Floating Action Button (Create Slot) ───
-        FloatingActionButton(
-            onClick = { onToggleCreateDialog(true) },
-            containerColor = GymAccentPrimary,
-            contentColor = Color.White,
-            shape = CircleShape,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(24.dp)
-                .size(56.dp)
-        ) {
-            Icon(Icons.Default.Add, contentDescription = "Create New Time Slot", modifier = Modifier.size(28.dp))
-        }
-
-        // ─── 7. Create Slot Modal Dialog ───
+        // Create Slot Dialog Modal
         if (state.isCreateDialogOpen) {
-            CreateSlotDialog(
+            CreateSlotModalDialog(
                 state = state,
                 theme = theme,
-                isDarkMode = isDarkMode,
                 onDismiss = { onToggleCreateDialog(false) },
-                onCreateSlot = onCreateSlot,
+                onCreate = onCreateSlot,
                 onTitleChanged = onNewSlotTitleChanged,
                 onTrainerChanged = onNewSlotTrainerChanged,
                 onDayChanged = onNewSlotDayChanged,
@@ -242,395 +294,243 @@ fun TimeSlotScreen(
     }
 }
 
-// ───────────────────────────────────────────────────
-// Sub-Components
-// ───────────────────────────────────────────────────
-
 @Composable
-private fun NavigationHeader(
+private fun KpiMiniCard(
+    label: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     theme: AppThemeColors,
-    onOpenDrawer: () -> Unit,
-    onNavigateBack: () -> Unit,
-    state: TimeSlotUiState
+    modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onOpenDrawer, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Default.Menu, contentDescription = "Open Drawer", tint = theme.textMain)
-            }
-            IconButton(onClick = onNavigateBack, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = theme.textMain)
-            }
-            Spacer(modifier = Modifier.width(6.dp))
-            Column {
-                Text(
-                    text = "Time Slot Schedule",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = theme.textMain
-                )
-                Text(
-                    text = "${state.totalSlotsThisWeek} slots this week  •  ${state.selectedDay.full}",
-                    fontSize = 12.sp,
-                    color = theme.textMuted
-                )
-            }
-        }
-
-        // Schedule icon badge
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(GymAccentPrimary.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.Default.Schedule, contentDescription = null, tint = GymAccentPrimary, modifier = Modifier.size(22.dp))
-        }
-    }
-}
-
-@Composable
-private fun SummaryStatsBanner(theme: AppThemeColors, isDarkMode: Boolean, state: TimeSlotUiState) {
     Card(
         colors = CardDefaults.cardColors(containerColor = theme.cardBg),
-        shape = RoundedCornerShape(14.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, theme.cardBorder, RoundedCornerShape(14.dp))
+        shape = RoundedCornerShape(12.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, theme.cardBorder),
+        modifier = modifier
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            StatItem(label = "Weekly Slots", value = "${state.totalSlotsThisWeek}", color = GymAccentPrimary, theme = theme)
-            VerticalDivider(modifier = Modifier.height(40.dp), color = theme.dividerColor)
-            StatItem(label = "Today's Bookings", value = "${state.totalBookingsToday}", color = GymAccentSecondary, theme = theme)
-            VerticalDivider(modifier = Modifier.height(40.dp), color = theme.dividerColor)
-            StatItem(label = "Checked In", value = "${state.checkedInToday}", color = Color(0xFF14B8A6), theme = theme)
-        }
-    }
-}
-
-@Composable
-private fun StatItem(label: String, value: String, color: Color, theme: AppThemeColors) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = value,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            color = color
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = label,
-            fontSize = 11.sp,
-            color = theme.textMuted,
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
-
-@Composable
-private fun WeeklyDayTabs(
-    theme: AppThemeColors,
-    isDarkMode: Boolean,
-    state: TimeSlotUiState,
-    onDaySelected: (DayOfWeek) -> Unit
-) {
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        items(DayOfWeek.entries) { day ->
-            val isSelected = state.selectedDay == day
-            val slotCount = state.slotCountPerDay[day] ?: 0
-
-            Surface(
-                onClick = { onDaySelected(day) },
-                shape = RoundedCornerShape(12.dp),
-                color = if (isSelected) GymAccentPrimary else theme.cardBg,
+            Box(
                 modifier = Modifier
-                    .border(
-                        width = 1.dp,
-                        color = if (isSelected) GymAccentPrimary else theme.cardBorder,
-                        shape = RoundedCornerShape(12.dp)
-                    )
+                    .size(34.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(GymAccentPrimary.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
             ) {
-                Column(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = day.short,
-                        fontSize = 13.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSelected) Color.White else theme.textMain
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    // Slot count badge
-                    Box(
-                        modifier = Modifier
-                            .size(20.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (isSelected) Color.White.copy(alpha = 0.25f)
-                                else theme.dividerColor
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "$slotCount",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isSelected) Color.White else theme.textMuted
-                        )
-                    }
-                }
+                Icon(icon, contentDescription = null, tint = GymAccentPrimary, modifier = Modifier.size(16.dp))
+            }
+            Column {
+                Text(label, fontSize = 11.sp, color = theme.textMuted)
+                Text(value, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = theme.textMain)
             }
         }
     }
 }
 
 @Composable
-private fun SlotCard(
+private fun ClassSlotBentoCard(
     slot: TimeSlot,
-    theme: AppThemeColors,
-    isDarkMode: Boolean,
     isExpanded: Boolean,
     attendanceRecords: List<AttendanceRecord>,
+    theme: AppThemeColors,
     onSlotClicked: () -> Unit,
-    onDeleteSlot: () -> Unit,
-    onToggleActive: () -> Unit,
-    onCheckIn: (memberId: String) -> Unit,
-    onCheckOut: (attendanceId: String) -> Unit,
-    onBook: () -> Unit
+    onBook: () -> Unit,
+    onDelete: () -> Unit,
+    onCheckIn: (String) -> Unit,
+    onCheckOut: (String) -> Unit
 ) {
-    val categoryColor = getCategoryColor(slot.category)
-    val capacityFraction = if (slot.maxCapacity > 0) slot.currentBookings.toFloat() / slot.maxCapacity else 0f
+    val occupancyRatio = if (slot.maxCapacity > 0) slot.currentBookings.toFloat() / slot.maxCapacity else 0f
+    val isFull = slot.currentBookings >= slot.maxCapacity
 
     Card(
         colors = CardDefaults.cardColors(containerColor = theme.cardBg),
-        shape = RoundedCornerShape(14.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, theme.cardBorder, RoundedCornerShape(14.dp))
+        shape = RoundedCornerShape(16.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, theme.cardBorder),
+        modifier = Modifier.fillMaxWidth().shadow(4.dp, RoundedCornerShape(16.dp))
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // Top row: Category + Title + Time
-            Row(
-                modifier = Modifier.fillMaxWidth().clickable { onSlotClicked() },
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Category emoji badge
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(categoryColor.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(text = slot.category.emoji, fontSize = 22.sp)
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = slot.title,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = theme.textMain,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false)
-                        )
-                        if (!slot.isActive) {
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(GymAccentDanger.copy(alpha = 0.15f))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text("DISABLED", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = GymAccentDanger)
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "${slot.trainerName}  •  ${slot.category.displayName}",
-                        fontSize = 12.sp,
-                        color = theme.textMuted
-                    )
-                }
-
-                // Time range badge
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = categoryColor.copy(alpha = 0.12f),
-                ) {
-                    Text(
-                        text = "${slot.startTime} – ${slot.endTime}",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = categoryColor,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Capacity progress bar
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "${slot.currentBookings}/${slot.maxCapacity} booked",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = theme.textMuted
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(6.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(theme.dividerColor)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(fraction = capacityFraction.coerceIn(0f, 1f))
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(
-                                when {
-                                    capacityFraction >= 0.9f -> GymAccentDanger
-                                    capacityFraction >= 0.7f -> GymAccentWarning
-                                    else -> GymAccentSecondary
-                                }
-                            )
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-            HorizontalDivider(color = theme.dividerColor)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Action buttons row
+        Column(modifier = Modifier.padding(14.dp)) {
+            // Top Row: Category Icon + Title + Trainer + Time + Book Button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Expand/collapse attendance
-                Surface(
-                    onClick = onSlotClicked,
-                    shape = RoundedCornerShape(8.dp),
-                    color = Color.Transparent
+                Row(
+                    modifier = Modifier.weight(1f, fill = false),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(GymAccentPrimary.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
                     ) {
+                        Text(slot.category.emoji, fontSize = 20.sp)
+                    }
+
+                    Column(modifier = Modifier.weight(1f, fill = false)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = slot.title,
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = theme.textMain,
+                                maxLines = 1
+                            )
+                            Surface(
+                                color = GymAccentPrimary.copy(alpha = 0.12f),
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    text = slot.category.displayName,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = GymAccentPrimary,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                        Text(
+                            text = "${slot.trainerName} • ${slot.startTime} - ${slot.endTime}",
+                            fontSize = 11.sp,
+                            color = theme.textMuted,
+                            maxLines = 1
+                        )
+                    }
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Button(
+                        onClick = onBook,
+                        enabled = !isFull,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isFull) theme.cardElevated else GymAccentSecondary,
+                            contentColor = if (isFull) theme.textMuted else Color.Black
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                        modifier = Modifier.height(34.dp)
+                    ) {
+                        Text(if (isFull) "Full" else "Book", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+
+                    IconButton(onClick = onSlotClicked, modifier = Modifier.size(34.dp)) {
                         Icon(
-                            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                            contentDescription = if (isExpanded) "Collapse" else "View Attendance",
+                            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.Group,
+                            contentDescription = "Roster",
                             tint = GymAccentPrimary,
                             modifier = Modifier.size(18.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = if (isExpanded) "Hide Attendance" else "View Attendance",
-                            fontSize = 12.sp,
-                            color = GymAccentPrimary,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    // Book slot button
-                    Surface(
-                        onClick = onBook,
-                        shape = RoundedCornerShape(8.dp),
-                        color = GymAccentSecondary.copy(alpha = 0.15f)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.BookmarkAdd, contentDescription = null, tint = GymAccentSecondary, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Book", fontSize = 11.sp, color = GymAccentSecondary, fontWeight = FontWeight.Bold)
-                        }
                     }
 
-                    // Toggle active
-                    IconButton(onClick = onToggleActive, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                            imageVector = if (slot.isActive) Icons.Default.ToggleOn else Icons.Default.ToggleOff,
-                            contentDescription = if (slot.isActive) "Disable Slot" else "Enable Slot",
-                            tint = if (slot.isActive) GymAccentSecondary else theme.textMuted,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-
-                    // Delete slot
-                    IconButton(onClick = onDeleteSlot, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete Slot",
-                            tint = GymAccentDanger.copy(alpha = 0.7f),
-                            modifier = Modifier.size(18.dp)
-                        )
+                    IconButton(onClick = onDelete, modifier = Modifier.size(30.dp)) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = GymAccentDanger, modifier = Modifier.size(15.dp))
                     }
                 }
             }
 
-            // ─── Expanded Attendance Panel ───
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Capacity Progress Bar
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Capacity", fontSize = 11.sp, color = theme.textMuted)
+                Text(
+                    text = "${slot.currentBookings} / ${slot.maxCapacity} Members Booked",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (isFull) GymAccentDanger else theme.textMain
+                )
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            LinearProgressIndicator(
+                progress = { occupancyRatio.coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                color = if (isFull) GymAccentDanger else GymAccentSecondary,
+                trackColor = theme.cardElevated
+            )
+
+            // Attendance Roster Expanded Drawer
             AnimatedVisibility(
                 visible = isExpanded,
-                enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut()
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
             ) {
-                Column(modifier = Modifier.padding(top = 12.dp)) {
+                Column(modifier = Modifier.padding(top = 16.dp)) {
                     HorizontalDivider(color = theme.dividerColor)
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "Attendance (${attendanceRecords.size} records)",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = theme.textMain
+                        text = "ACTIVE CLASS ROSTER (${attendanceRecords.size})",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                        color = theme.textMuted
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     if (attendanceRecords.isEmpty()) {
-                        Text(
-                            text = "No attendance records yet",
-                            fontSize = 12.sp,
-                            color = theme.textMuted,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
+                        Text("No members have checked in or booked yet.", fontSize = 12.sp, color = theme.textMuted)
                     } else {
                         attendanceRecords.forEach { record ->
-                            AttendanceRecordRow(
-                                record = record,
-                                theme = theme,
-                                onCheckIn = { onCheckIn(record.memberId) },
-                                onCheckOut = { onCheckOut(record.id) }
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(theme.cardElevated)
+                                    .padding(10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clip(CircleShape)
+                                            .background(GymAccentPrimary.copy(alpha = 0.2f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(record.memberName.take(1), fontWeight = FontWeight.Bold, color = GymAccentPrimary, fontSize = 12.sp)
+                                    }
+                                    Column {
+                                        Text(record.memberName, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = theme.textMain)
+                                        Text(record.status.displayName, fontSize = 10.sp, color = GymAccentSecondary)
+                                    }
+                                }
+
+                                if (record.status == AttendanceStatus.BOOKED) {
+                                    Button(
+                                        onClick = { onCheckIn(record.memberId) },
+                                        colors = ButtonDefaults.buttonColors(containerColor = GymAccentSecondary),
+                                        shape = RoundedCornerShape(6.dp),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                    ) {
+                                        Text("Check In", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                    }
+                                } else if (record.status == AttendanceStatus.CHECKED_IN) {
+                                    Button(
+                                        onClick = { onCheckOut(record.id) },
+                                        colors = ButtonDefaults.buttonColors(containerColor = theme.cardBorder),
+                                        shape = RoundedCornerShape(6.dp),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                    ) {
+                                        Text("Check Out", fontSize = 10.sp, color = theme.textMain)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -640,119 +540,11 @@ private fun SlotCard(
 }
 
 @Composable
-private fun AttendanceRecordRow(
-    record: AttendanceRecord,
-    theme: AppThemeColors,
-    onCheckIn: () -> Unit,
-    onCheckOut: () -> Unit
-) {
-    val statusColor = getStatusColor(record.status)
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(statusColor.copy(alpha = 0.06f))
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Member avatar
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .background(statusColor.copy(alpha = 0.2f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = record.memberName.take(1).uppercase(),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = statusColor
-            )
-        }
-
-        Spacer(modifier = Modifier.width(10.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = record.memberName,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = theme.textMain
-            )
-            Row {
-                Text(
-                    text = "${record.status.emoji} ${record.status.displayName}",
-                    fontSize = 11.sp,
-                    color = statusColor,
-                    fontWeight = FontWeight.Medium
-                )
-                if (record.checkInTime != null) {
-                    Text(
-                        text = "  •  In: ${record.checkInTime}",
-                        fontSize = 11.sp,
-                        color = theme.textMuted
-                    )
-                }
-                if (record.checkOutTime != null) {
-                    Text(
-                        text = "  Out: ${record.checkOutTime}",
-                        fontSize = 11.sp,
-                        color = theme.textMuted
-                    )
-                }
-            }
-        }
-
-        // Action buttons based on status
-        when (record.status) {
-            AttendanceStatus.BOOKED -> {
-                Surface(
-                    onClick = onCheckIn,
-                    shape = RoundedCornerShape(6.dp),
-                    color = GymAccentSecondary.copy(alpha = 0.15f)
-                ) {
-                    Text(
-                        text = "Check In",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = GymAccentSecondary,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    )
-                }
-            }
-            AttendanceStatus.CHECKED_IN -> {
-                Surface(
-                    onClick = onCheckOut,
-                    shape = RoundedCornerShape(6.dp),
-                    color = GymAccentPrimary.copy(alpha = 0.15f)
-                ) {
-                    Text(
-                        text = "Check Out",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = GymAccentPrimary,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    )
-                }
-            }
-            else -> { /* No action for CHECKED_OUT or NO_SHOW */ }
-        }
-    }
-}
-
-// ───────────────────────────────────────────────────
-// Create Slot Modal Dialog
-// ───────────────────────────────────────────────────
-
-@Composable
-private fun CreateSlotDialog(
+private fun CreateSlotModalDialog(
     state: TimeSlotUiState,
     theme: AppThemeColors,
-    isDarkMode: Boolean,
     onDismiss: () -> Unit,
-    onCreateSlot: () -> Unit,
+    onCreate: () -> Unit,
     onTitleChanged: (String) -> Unit,
     onTrainerChanged: (String) -> Unit,
     onDayChanged: (DayOfWeek) -> Unit,
@@ -761,206 +553,66 @@ private fun CreateSlotDialog(
     onCapacityChanged: (String) -> Unit,
     onCategoryChanged: (SlotCategory) -> Unit
 ) {
-    var isDayDropdownExpanded by remember { mutableStateOf(false) }
-    var isCategoryDropdownExpanded by remember { mutableStateOf(false) }
-
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = theme.cardBg,
-        shape = RoundedCornerShape(20.dp),
         title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Add, contentDescription = null, tint = GymAccentPrimary, modifier = Modifier.size(24.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Create New Slot", color = theme.textMain, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            }
+            Text("Create Class / Time Slot", fontWeight = FontWeight.Bold, color = theme.textMain)
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                // Title field
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
                     value = state.newSlotTitle,
                     onValueChange = onTitleChanged,
-                    label = { Text("Slot Title", color = theme.textMuted) },
-                    placeholder = { Text("e.g. Morning Power Yoga", color = theme.textMuted.copy(alpha = 0.5f)) },
+                    label = { Text("Class Name (e.g. HIIT Morning Burn)") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = GymAccentPrimary,
-                        unfocusedBorderColor = theme.cardBorder,
-                        focusedTextColor = theme.textMain,
-                        unfocusedTextColor = theme.textMain,
-                        cursorColor = GymAccentPrimary
-                    )
+                    modifier = Modifier.fillMaxWidth()
                 )
-
-                // Trainer field
                 OutlinedTextField(
                     value = state.newSlotTrainer,
                     onValueChange = onTrainerChanged,
-                    label = { Text("Trainer Name", color = theme.textMuted) },
-                    placeholder = { Text("e.g. Coach Arjun", color = theme.textMuted.copy(alpha = 0.5f)) },
+                    label = { Text("Coach / Trainer (e.g. Coach Sarah Jenkins)") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = GymAccentPrimary,
-                        unfocusedBorderColor = theme.cardBorder,
-                        focusedTextColor = theme.textMain,
-                        unfocusedTextColor = theme.textMain,
-                        cursorColor = GymAccentPrimary
-                    )
+                    modifier = Modifier.fillMaxWidth()
                 )
-
-                // Day selector dropdown
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedTextField(
-                        value = "${state.newSlotDay.full}",
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Day of Week", color = theme.textMuted) },
-                        trailingIcon = {
-                            IconButton(onClick = { isDayDropdownExpanded = true }) {
-                                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = theme.textMuted)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth().clickable { isDayDropdownExpanded = true },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = GymAccentPrimary,
-                            unfocusedBorderColor = theme.cardBorder,
-                            focusedTextColor = theme.textMain,
-                            unfocusedTextColor = theme.textMain
-                        )
-                    )
-                    DropdownMenu(
-                        expanded = isDayDropdownExpanded,
-                        onDismissRequest = { isDayDropdownExpanded = false },
-                        modifier = Modifier.background(theme.cardBg)
-                    ) {
-                        DayOfWeek.entries.forEach { day ->
-                            DropdownMenuItem(
-                                text = { Text(day.full, color = theme.textMain, fontSize = 14.sp) },
-                                onClick = {
-                                    onDayChanged(day)
-                                    isDayDropdownExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                // Time range row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = state.newSlotStartTime,
                         onValueChange = onStartTimeChanged,
-                        label = { Text("Start", color = theme.textMuted) },
-                        placeholder = { Text("06:00", color = theme.textMuted.copy(alpha = 0.5f)) },
+                        label = { Text("Start Time") },
                         singleLine = true,
-                        modifier = Modifier.weight(1f),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = GymAccentPrimary,
-                            unfocusedBorderColor = theme.cardBorder,
-                            focusedTextColor = theme.textMain,
-                            unfocusedTextColor = theme.textMain,
-                            cursorColor = GymAccentPrimary
-                        )
+                        modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = state.newSlotEndTime,
                         onValueChange = onEndTimeChanged,
-                        label = { Text("End", color = theme.textMuted) },
-                        placeholder = { Text("07:00", color = theme.textMuted.copy(alpha = 0.5f)) },
+                        label = { Text("End Time") },
                         singleLine = true,
-                        modifier = Modifier.weight(1f),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = GymAccentPrimary,
-                            unfocusedBorderColor = theme.cardBorder,
-                            focusedTextColor = theme.textMain,
-                            unfocusedTextColor = theme.textMain,
-                            cursorColor = GymAccentPrimary
-                        )
+                        modifier = Modifier.weight(1f)
                     )
                 }
-
-                // Capacity field
                 OutlinedTextField(
                     value = state.newSlotCapacity,
                     onValueChange = onCapacityChanged,
-                    label = { Text("Max Capacity", color = theme.textMuted) },
-                    placeholder = { Text("20", color = theme.textMuted.copy(alpha = 0.5f)) },
+                    label = { Text("Max Capacity (e.g. 20)") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = GymAccentPrimary,
-                        unfocusedBorderColor = theme.cardBorder,
-                        focusedTextColor = theme.textMain,
-                        unfocusedTextColor = theme.textMain,
-                        cursorColor = GymAccentPrimary
-                    )
+                    modifier = Modifier.fillMaxWidth()
                 )
-
-                // Category selector
-                Text("Category:", fontSize = 12.sp, color = theme.textMuted, fontWeight = FontWeight.SemiBold)
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(SlotCategory.entries) { category ->
-                        val isSelected = state.newSlotCategory == category
-                        val catColor = getCategoryColor(category)
-                        Surface(
-                            onClick = { onCategoryChanged(category) },
-                            shape = RoundedCornerShape(10.dp),
-                            color = if (isSelected) catColor.copy(alpha = 0.2f) else Color.Transparent,
-                            modifier = Modifier.border(
-                                width = if (isSelected) 1.5.dp else 1.dp,
-                                color = if (isSelected) catColor else theme.cardBorder,
-                                shape = RoundedCornerShape(10.dp)
-                            )
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(text = category.emoji, fontSize = 14.sp)
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = category.displayName,
-                                    fontSize = 12.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) catColor else theme.textMain
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Error message in dialog
-                state.errorMessage?.let { error ->
-                    Text(
-                        text = error,
-                        fontSize = 12.sp,
-                        color = GymAccentDanger,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
             }
         },
         confirmButton = {
             Button(
-                onClick = onCreateSlot,
-                colors = ButtonDefaults.buttonColors(containerColor = GymAccentPrimary),
-                shape = RoundedCornerShape(10.dp)
+                onClick = onCreate,
+                enabled = state.newSlotTitle.isNotBlank(),
+                colors = ButtonDefaults.buttonColors(containerColor = GymAccentPrimary)
             ) {
-                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Create Slot", fontWeight = FontWeight.Bold)
+                Text("Create Slot", color = Color.White)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = theme.textMuted, fontWeight = FontWeight.Medium)
+                Text("Cancel", color = theme.textMuted)
             }
-        }
+        },
+        containerColor = theme.cardBg
     )
 }

@@ -18,12 +18,12 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
-private val BlueArc = Color(0xFF2196F3)    // Underweight (<18.5)
-private val GreenArc = Color(0xFF76FF03)   // Normal (18.5 - 24.9)
-private val OrangeArc = Color(0xFFFF5722)  // Overweight (25.0 - 29.9)
-private val RedArc = Color(0xFFFF1744)     // Obesity (30.0+)
-private val TextMain = Color(0xFFFFFFFF)
-private val TextMuted = Color(0xFFA1A1AA)
+private val BlueArc = Color(0xFF6366F1)    // Underweight (Electric Indigo)
+private val GreenArc = Color(0xFF4EDEA3)   // Normal (Emerald Green)
+private val OrangeArc = Color(0xFFF59E0B)  // Overweight (Amber)
+private val RedArc = Color(0xFFFF5451)     // Obesity (Coral Red)
+private val TextMain = Color(0xFFDAE2FD)
+private val TextMuted = Color(0xFF94A3B8)
 
 /**
  * Custom Semi-circle Gauge Canvas for BMI & Body Fat % matching the screenshot.
