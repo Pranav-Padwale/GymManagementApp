@@ -6,6 +6,7 @@ import com.gym.server.database.MongoConfig
 import com.gym.server.documents.MemberDocument
 import io.ktor.http.*
 import io.ktor.server.application.*
+import com.gym.server.security.MemberCredentialProvisioner
 import com.gym.server.security.isRoleAllowed
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
@@ -13,6 +14,19 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.flow.toList
+import kotlinx.serialization.Serializable
+
+/**
+ * Response for a successful member creation. [temporaryPassword] is only ever returned here,
+ * once - it is never stored or retrievable again, so the caller (an admin/trainer) must hand
+ * it to the member out-of-band immediately (see MEMBER-2 in the QA audit).
+ */
+@Serializable
+data class MemberCreatedResponse(
+    val member: Member,
+    val username: String,
+    val temporaryPassword: String
+)
 
 fun Route.memberRoutes() {
     authenticate {
@@ -27,9 +41,20 @@ fun Route.memberRoutes() {
                 if (!call.requireRole("SUPER_ADMIN", "TRAINER")) return@post
 
                 val newMember = call.receive<Member>()
-                val doc = newMember.toDocument()
+                val existingUsernames = MongoConfig.members.find().toList().map { it.username }.toSet()
+                val provisioned = MemberCredentialProvisioner.provision(newMember.email)
+                val username = MemberCredentialProvisioner.uniqueUsername(provisioned.username, existingUsernames)
+
+                val doc = newMember.toDocument().copy(
+                    username = username,
+                    passwordHash = provisioned.passwordHash,
+                    role = "MEMBER"
+                )
                 MongoConfig.members.insertOne(doc)
-                call.respond(HttpStatusCode.Created, newMember)
+                call.respond(
+                    HttpStatusCode.Created,
+                    MemberCreatedResponse(newMember, username, provisioned.plainTemporaryPassword)
+                )
             }
 
             patch("{id}/status") {

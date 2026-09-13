@@ -5,7 +5,9 @@ import com.gym.server.documents.MemberDocument
 import com.gym.server.documents.TimeSlotDocument
 import com.gym.server.documents.TrainerDocument
 import com.gym.server.documents.TransactionDocument
+import com.gym.server.security.PasswordHasher
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 
 object DataSeeder {
@@ -17,7 +19,7 @@ object DataSeeder {
                 listOf(
                     AdminDocument(
                         username = "admin",
-                        passwordHash = "admin123",
+                        passwordHash = PasswordHasher.hash("admin123"),
                         fullName = "Super Administrator",
                         email = "admin@forgegym.com",
                         role = "SUPER_ADMIN"
@@ -33,7 +35,7 @@ object DataSeeder {
                 listOf(
                     TrainerDocument(
                         username = "trainer",
-                        passwordHash = "trainer123",
+                        passwordHash = PasswordHasher.hash("trainer123"),
                         fullName = "Coach Sarah Jenkins",
                         email = "sarah.j@forgegym.com",
                         phone = "+1 555-0144",
@@ -42,7 +44,7 @@ object DataSeeder {
                     ),
                     TrainerDocument(
                         username = "arjun",
-                        passwordHash = "arjun123",
+                        passwordHash = PasswordHasher.hash("arjun123"),
                         fullName = "Coach Arjun Mehta",
                         email = "arjun.m@forgegym.com",
                         phone = "+1 555-0188",
@@ -51,7 +53,7 @@ object DataSeeder {
                     ),
                     TrainerDocument(
                         username = "marcus",
-                        passwordHash = "marcus123",
+                        passwordHash = PasswordHasher.hash("marcus123"),
                         fullName = "Coach Marcus Chen",
                         email = "marcus.c@forgegym.com",
                         phone = "+1 555-0199",
@@ -70,7 +72,7 @@ object DataSeeder {
                     MemberDocument(
                         id = "M-101",
                         username = "member",
-                        passwordHash = "member123",
+                        passwordHash = PasswordHasher.hash("member123"),
                         fullName = "Alex Rivers",
                         email = "alex@example.com",
                         phone = "+1 555-0192",
@@ -83,7 +85,7 @@ object DataSeeder {
                     MemberDocument(
                         id = "M-102",
                         username = "sam",
-                        passwordHash = "sam123",
+                        passwordHash = PasswordHasher.hash("sam123"),
                         fullName = "Sam Chen",
                         email = "sam.c@example.com",
                         phone = "+1 555-8832",
@@ -96,7 +98,7 @@ object DataSeeder {
                     MemberDocument(
                         id = "M-103",
                         username = "jordan",
-                        passwordHash = "jordan123",
+                        passwordHash = PasswordHasher.hash("jordan123"),
                         fullName = "Jordan Lee",
                         email = "jordan@example.com",
                         phone = "+1 555-9921",
@@ -139,6 +141,52 @@ object DataSeeder {
             )
         }
         
+        migrateLegacyPlaintextPasswords()
+
         println("✅ Multi-Collection Database Seeding Verification Complete.")
+    }
+
+    /**
+     * One-time-per-startup migration for accounts created before AUTH-2's bcrypt hashing was
+     * introduced: any passwordHash value that isn't already a valid bcrypt hash is a leftover
+     * plaintext value (from before this fix, or from a pre-existing live database) and gets
+     * rehashed in place. Safe to run on every startup - already-hashed accounts are untouched.
+     */
+    private suspend fun migrateLegacyPlaintextPasswords() {
+        val legacyAdmins = MongoConfig.superAdmins.find().toList()
+            .filter { !PasswordHasher.isBcryptHash(it.passwordHash) }
+        if (legacyAdmins.isNotEmpty()) {
+            println("🔐 Migrating ${legacyAdmins.size} legacy plaintext admin password(s) to bcrypt...")
+            legacyAdmins.forEach { admin ->
+                MongoConfig.superAdmins.replaceOne(
+                    com.mongodb.client.model.Filters.eq("_id", admin.username),
+                    admin.copy(passwordHash = PasswordHasher.hash(admin.passwordHash))
+                )
+            }
+        }
+
+        val legacyTrainers = MongoConfig.trainers.find().toList()
+            .filter { !PasswordHasher.isBcryptHash(it.passwordHash) }
+        if (legacyTrainers.isNotEmpty()) {
+            println("🔐 Migrating ${legacyTrainers.size} legacy plaintext trainer password(s) to bcrypt...")
+            legacyTrainers.forEach { trainer ->
+                MongoConfig.trainers.replaceOne(
+                    com.mongodb.client.model.Filters.eq("_id", trainer.username),
+                    trainer.copy(passwordHash = PasswordHasher.hash(trainer.passwordHash))
+                )
+            }
+        }
+
+        val legacyMembers = MongoConfig.members.find().toList()
+            .filter { !PasswordHasher.isBcryptHash(it.passwordHash) }
+        if (legacyMembers.isNotEmpty()) {
+            println("🔐 Migrating ${legacyMembers.size} legacy plaintext member password(s) to bcrypt...")
+            legacyMembers.forEach { member ->
+                MongoConfig.members.replaceOne(
+                    com.mongodb.client.model.Filters.eq("_id", member.id),
+                    member.copy(passwordHash = PasswordHasher.hash(member.passwordHash))
+                )
+            }
+        }
     }
 }
