@@ -91,6 +91,7 @@ class ActivityController(
             val dateIso = "$year-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}"
             val calResult = repository.getCalorieData(dateIso)
             val macroResult = repository.getNutritionMacros(dateIso)
+            val failure = listOf<Result<*>>(calResult, macroResult).firstNotNullOfOrNull { it.exceptionOrNull() }
 
             // Dynamic date-indexed calorie data for real interactive demonstration
             val dateCalorieData = if (isToday) {
@@ -105,7 +106,8 @@ class ActivityController(
                 it.copy(
                     isLoading = false,
                     calorieData = dateCalorieData,
-                    macros = macroResult.getOrDefault(it.macros)
+                    macros = macroResult.getOrDefault(it.macros),
+                    errorMessage = failure?.let { e -> "Failed to load data for selected date: ${e.message}" }
                 )
             }
         }
@@ -145,8 +147,15 @@ class ActivityController(
     fun onGrantHealthPermission() {
         scope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            repository.setHealthPermissionGranted(true)
-            refreshActivityData()
+            val result = repository.setHealthPermissionGranted(true)
+            result.fold(
+                onSuccess = { refreshActivityData() },
+                onFailure = { error ->
+                    _uiState.update {
+                        it.copy(isLoading = false, errorMessage = "Failed to update health permission: ${error.message}")
+                    }
+                }
+            )
         }
     }
 
@@ -157,9 +166,12 @@ class ActivityController(
         _uiState.update { it.copy(selectedTimeRange = timeRange) }
         scope.launch {
             val graphResult = repository.getCalorieGraphHistory(timeRange)
-            graphResult.onSuccess { points ->
-                _uiState.update { it.copy(graphHistory = points) }
-            }
+            graphResult.fold(
+                onSuccess = { points -> _uiState.update { it.copy(graphHistory = points, errorMessage = null) } },
+                onFailure = { error ->
+                    _uiState.update { it.copy(errorMessage = "Failed to load graph history: ${error.message}") }
+                }
+            )
         }
     }
 
@@ -196,6 +208,8 @@ class ActivityController(
             val macroResult = repository.getNutritionMacros(date)
             val graphResult = repository.getCalorieGraphHistory(range)
             val permResult = repository.isHealthPermissionGranted()
+            val failure = listOf<Result<*>>(calResult, macroResult, graphResult, permResult)
+                .firstNotNullOfOrNull { it.exceptionOrNull() }
 
             _uiState.update {
                 it.copy(
@@ -203,9 +217,17 @@ class ActivityController(
                     calorieData = calResult.getOrDefault(it.calorieData),
                     macros = macroResult.getOrDefault(it.macros),
                     graphHistory = graphResult.getOrDefault(it.graphHistory),
-                    isHealthPermissionGranted = permResult.getOrDefault(false)
+                    isHealthPermissionGranted = permResult.getOrDefault(false),
+                    errorMessage = failure?.let { e -> "Failed to load activity data: ${e.message}" }
                 )
             }
         }
+    }
+
+    /**
+     * Action handler: Clear error message banner.
+     */
+    fun onClearError() {
+        _uiState.update { it.copy(errorMessage = null) }
     }
 }

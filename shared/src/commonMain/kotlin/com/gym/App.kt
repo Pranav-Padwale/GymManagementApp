@@ -231,6 +231,9 @@ fun App() {
                                 onAddMember = { newMember ->
                                     memberController.onAddMember(newMember)
                                 },
+                                onDismissNewMemberCredentials = {
+                                    memberController.onDismissNewMemberCredentials()
+                                },
                                 onRefresh = {
                                     memberController.refreshMembers()
                                 }

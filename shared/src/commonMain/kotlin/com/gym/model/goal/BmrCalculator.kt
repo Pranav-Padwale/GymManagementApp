@@ -61,12 +61,14 @@ object BmrCalculator {
         // TDEE Maintenance
         val tdee = bmr * activityLevel.multiplier
 
-        // Calorie Goal Adjustment
+        // Calorie Goal Adjustment - every branch is floored at 1200 kcal/day (a widely used
+        // minimum safe intake) so pathological/invalid biometric inputs can never produce a
+        // negative or unsafely low calorie target.
         val finalCalories = when (weightGoal) {
-            WeightGoal.GAIN -> tdee + 300.0
+            WeightGoal.GAIN -> (tdee + 300.0).coerceAtLeast(1200.0)
             WeightGoal.LOSE -> (tdee - 400.0).coerceAtLeast(1200.0)
             WeightGoal.LOSE_KETO -> (tdee - 450.0).coerceAtLeast(1200.0)
-            WeightGoal.MAINTAIN -> tdee
+            WeightGoal.MAINTAIN -> tdee.coerceAtLeast(1200.0)
         }
 
         // Macro Distribution

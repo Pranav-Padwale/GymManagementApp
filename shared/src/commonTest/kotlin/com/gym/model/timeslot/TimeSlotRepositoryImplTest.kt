@@ -41,29 +41,47 @@ class TimeSlotRepositoryImplTest {
     }
 
     @Test
-    fun bookSlot_capacityCheck_diverges_fromDisplayedCurrentBookingsField_documentsDataModelGap() = runTest {
-        // NOTE (see QA report "SLOT-1"): TimeSlot.currentBookings is a display counter that is
-        // seeded independently of the real attendance ledger. bookSlot() enforces capacity using
-        // attendanceDb.count{...} - the *actual* number of AttendanceRecord rows for the slot -
-        // not the currentBookings field. For TS-002 those two numbers start far apart: the seed
-        // data shows "24/30 booked" but only 3 real AttendanceRecord rows exist for TS-002.
+    fun currentBookings_onInit_matchesTheRealAttendanceLedgerNotAnIndependentSeedValue() = runTest {
+        // Regression test for SLOT-1: TimeSlot.currentBookings used to be seeded independently
+        // of the real attendance ledger - for TS-002 the seed data showed "24/30 booked" while
+        // only 3 real AttendanceRecord rows (ATT-005/006/007) actually existed. Now it's derived
+        // from the ledger at construction time, so the two can never disagree.
         val repo = TimeSlotRepositoryImpl()
-        val slot = repo.getAllSlots().getOrThrow().first { it.id == "TS-002" }
-        assertEquals(30, slot.maxCapacity)
-        assertEquals(24, slot.currentBookings, "Seed data's displayed counter for TS-002")
 
-        // The real ledger only has 3 AttendanceRecord rows for TS-002 (ATT-005/006/007), so the
-        // true remaining capacity is 27, not the 6 that "24/30" would suggest to a user.
+        val slot = repo.getAllSlots().getOrThrow().first { it.id == "TS-002" }
         val realBookedCount = repo.getAttendanceForSlot("TS-002").getOrThrow().size
+
         assertEquals(3, realBookedCount)
+        assertEquals(realBookedCount, slot.currentBookings)
+    }
+
+    @Test
+    fun currentBookings_everySlot_matchesItsRealAttendanceCountOnInit() = runTest {
+        val repo = TimeSlotRepositoryImpl()
+        val allSlots = repo.getAllSlots().getOrThrow()
+
+        allSlots.forEach { slot ->
+            val realCount = repo.getAttendanceForSlot(slot.id).getOrThrow().size
+            assertEquals(realCount, slot.currentBookings, "Slot ${slot.id} displayed count must match its real ledger count")
+        }
+    }
+
+    @Test
+    fun bookSlot_currentBookingsStaysInSyncWithRealLedger_untilTrueCapacityIsHit() = runTest {
+        val repo = TimeSlotRepositoryImpl()
+        val maxCapacity = repo.getAllSlots().getOrThrow().first { it.id == "TS-002" }.maxCapacity
+        assertEquals(30, maxCapacity)
 
         var lastResult: Result<AttendanceRecord> = Result.failure(Exception("not run"))
+        // 3 real bookings already exist for TS-002; fill the remaining 27 seats.
         repeat(27) { i ->
             lastResult = repo.bookSlot("TS-002", "M-TEST-$i", "Test Member $i")
         }
-        assertTrue(lastResult.isSuccess, "Expected all 27 additional bookings to succeed despite the field showing only 6 slots left")
+        assertTrue(lastResult.isSuccess)
+        val fullSlot = repo.getAllSlots().getOrThrow().first { it.id == "TS-002" }
+        assertEquals(30, fullSlot.currentBookings, "Displayed count must reflect the now-full real ledger")
 
-        // The 28th booking (real count now at 30) correctly hits the true capacity ceiling.
+        // The 28th booking correctly hits the true capacity ceiling.
         val overflow = repo.bookSlot("TS-002", "M-TEST-OVERFLOW", "Overflow Member")
         assertTrue(overflow.isFailure)
         assertTrue(overflow.exceptionOrNull()?.message?.contains("full capacity") == true)

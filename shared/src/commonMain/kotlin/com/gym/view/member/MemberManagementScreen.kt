@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import com.gym.controller.member.MemberUiState
 import com.gym.model.member.Member
 import com.gym.model.member.MemberStatus
+import com.gym.model.member.NewMemberCredentials
 import com.gym.view.theme.*
 
 /**
@@ -46,6 +47,7 @@ fun MemberManagementScreen(
     onFilterStatusChanged: (MemberStatus?) -> Unit,
     onUpdateMemberStatus: (memberId: String, newStatus: MemberStatus) -> Unit,
     onAddMember: (Member) -> Unit = {},
+    onDismissNewMemberCredentials: () -> Unit = {},
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -357,6 +359,16 @@ fun MemberManagementScreen(
                 }
             )
         }
+
+        // New Member Credentials Dialog - shown once right after a member is created,
+        // since the temporary password is never retrievable again after this.
+        state.newMemberCredentials?.let { credentials ->
+            NewMemberCredentialsDialog(
+                theme = theme,
+                credentials = credentials,
+                onDismiss = onDismissNewMemberCredentials
+            )
+        }
     }
 }
 
@@ -651,4 +663,55 @@ private fun AddMemberDialog(
         },
         containerColor = theme.cardBg
     )
+}
+
+/**
+ * Shown once, right after a new member is created, to hand its generated login
+ * credentials to the admin - the temporary password is never shown again after this.
+ */
+@Composable
+private fun NewMemberCredentialsDialog(
+    theme: AppThemeColors,
+    credentials: NewMemberCredentials,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Member Created", fontWeight = FontWeight.Bold, color = theme.textMain)
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    "Share these login details with the new member now - the password won't be shown again.",
+                    color = theme.textMuted,
+                    fontSize = 13.sp
+                )
+                CredentialRow(label = "Username", value = credentials.username, theme = theme)
+                CredentialRow(label = "Temporary Password", value = credentials.temporaryPassword, theme = theme)
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(containerColor = GymAccentPrimary)
+            ) {
+                Text("Got It", color = Color.White)
+            }
+        },
+        containerColor = theme.cardBg
+    )
+}
+
+@Composable
+private fun CredentialRow(label: String, value: String, theme: AppThemeColors) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(theme.bg, RoundedCornerShape(8.dp))
+            .padding(10.dp)
+    ) {
+        Text(label, color = theme.textMuted, fontSize = 11.sp)
+        Text(value, color = theme.textMain, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+    }
 }

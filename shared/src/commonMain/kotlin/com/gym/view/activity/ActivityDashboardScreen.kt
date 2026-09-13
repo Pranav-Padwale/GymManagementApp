@@ -78,6 +78,29 @@ fun ActivityDashboardScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Error Banner (if present)
+            AnimatedVisibility(
+                visible = state.errorMessage != null,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                state.errorMessage?.let { error ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = GymAccentDanger.copy(alpha = 0.15f)),
+                        shape = RoundedCornerShape(10.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, GymAccentDanger.copy(alpha = 0.4f))
+                    ) {
+                        Text(
+                            text = error,
+                            color = GymAccentDanger,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+                }
+            }
+
             // 1. Navigation Header
             Row(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp),

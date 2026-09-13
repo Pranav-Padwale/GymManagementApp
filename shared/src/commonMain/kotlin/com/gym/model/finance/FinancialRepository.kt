@@ -112,6 +112,9 @@ class FinancialRepositoryImpl(
         month: Int,
         year: Int
     ): Result<Unit> {
+        if (amount <= 0.0) {
+            return Result.failure(IllegalArgumentException("Expense amount must be greater than zero, was $amount"))
+        }
         val newTx = Transaction(
             id = "TX-${kotlin.random.Random.nextLong(100000, 999999)}",
             title = title,
@@ -126,6 +129,11 @@ class FinancialRepositoryImpl(
     }
 
     override suspend fun addTransaction(transaction: Transaction): Result<Unit> = withContext(Dispatchers.IO) {
+        if (transaction.amount <= 0.0) {
+            return@withContext Result.failure(
+                IllegalArgumentException("Transaction amount must be greater than zero, was ${transaction.amount}")
+            )
+        }
         try {
             if (transactionDao != null) {
                 transactionDao.insertTransaction(TransactionEntity.fromDomain(transaction))

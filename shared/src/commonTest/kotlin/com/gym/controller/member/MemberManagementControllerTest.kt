@@ -3,6 +3,7 @@ package com.gym.controller.member
 import com.gym.model.member.Member
 import com.gym.model.member.MemberRepository
 import com.gym.model.member.MemberStatus
+import com.gym.model.member.NewMemberCredentials
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -14,6 +15,7 @@ import kotlin.test.assertTrue
 
 private class FakeMemberRepository(seed: List<Member> = emptyList()) : MemberRepository {
     var shouldFail = false
+    var credentialsToIssue: NewMemberCredentials? = null
     val members = seed.toMutableList()
 
     override suspend fun getMembers(statusFilter: MemberStatus?): Result<List<Member>> =
@@ -28,10 +30,10 @@ private class FakeMemberRepository(seed: List<Member> = emptyList()) : MemberRep
         return Result.success(Unit)
     }
 
-    override suspend fun addMember(member: Member): Result<Unit> {
+    override suspend fun addMember(member: Member): Result<NewMemberCredentials?> {
         if (shouldFail) return Result.failure(Exception("simulated write failure"))
         members.add(member)
-        return Result.success(Unit)
+        return Result.success(credentialsToIssue)
     }
 }
 
@@ -125,5 +127,45 @@ class MemberManagementControllerTest {
         controller.onAddMember(sampleMember("M-NEW", MemberStatus.ENQUIRE))
 
         assertTrue(controller.uiState.value.members.any { it.id == "M-NEW" })
+    }
+
+    @Test
+    fun onAddMember_repositoryIssuesCredentials_populatesStateForTheUiToDisplay() = runTest {
+        // Regression test for the MEMBER-2 UI follow-up: the temporary password used to be
+        // returned by the repository and then discarded - nothing surfaced it to an admin.
+        val repo = FakeMemberRepository().apply {
+            credentialsToIssue = NewMemberCredentials(username = "newmember", temporaryPassword = "aB3xY9kLmZ2q")
+        }
+        val controller = newController(repo)
+
+        controller.onAddMember(sampleMember("M-NEW", MemberStatus.ENQUIRE))
+
+        val credentials = controller.uiState.value.newMemberCredentials
+        assertEquals("newmember", credentials?.username)
+        assertEquals("aB3xY9kLmZ2q", credentials?.temporaryPassword)
+    }
+
+    @Test
+    fun onAddMember_repositoryIssuesNoCredentials_leavesStateNull() = runTest {
+        val repo = FakeMemberRepository() // credentialsToIssue defaults to null
+        val controller = newController(repo)
+
+        controller.onAddMember(sampleMember("M-NEW", MemberStatus.ENQUIRE))
+
+        assertNull(controller.uiState.value.newMemberCredentials)
+    }
+
+    @Test
+    fun onDismissNewMemberCredentials_clearsTheCredentialsFromState() = runTest {
+        val repo = FakeMemberRepository().apply {
+            credentialsToIssue = NewMemberCredentials(username = "newmember", temporaryPassword = "aB3xY9kLmZ2q")
+        }
+        val controller = newController(repo)
+        controller.onAddMember(sampleMember("M-NEW", MemberStatus.ENQUIRE))
+        assertNotNull(controller.uiState.value.newMemberCredentials)
+
+        controller.onDismissNewMemberCredentials()
+
+        assertNull(controller.uiState.value.newMemberCredentials)
     }
 }

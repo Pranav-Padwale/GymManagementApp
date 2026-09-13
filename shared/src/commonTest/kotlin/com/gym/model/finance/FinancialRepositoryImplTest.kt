@@ -78,12 +78,10 @@ class FinancialRepositoryImplTest {
     }
 
     @Test
-    fun addExpense_negativeAmount_isAcceptedWithNoValidation_documentsMissingModelLayerGuard() = runTest {
-        // NOTE: documents a real gap (see QA report "FIN-1"): FinancialRepositoryImpl has
-        // no amount validation of its own. The only guard against non-positive amounts lives
-        // in FinanceController.onAddExpense's UI-layer check, so any other caller of this
-        // Model-layer API (tests, a future second UI, a batch import) can silently corrupt
-        // balance sheet totals with negative "expenses".
+    fun addExpense_negativeAmount_isRejected() = runTest {
+        // Regression test for FIN-1: FinancialRepositoryImpl previously had no amount
+        // validation of its own - only FinanceController's UI-layer check guarded against
+        // non-positive amounts, so any other caller could silently corrupt balance sheet totals.
         val repo = FinancialRepositoryImpl()
 
         val result = repo.addExpense(
@@ -91,9 +89,31 @@ class FinancialRepositoryImplTest {
             category = TransactionCategory.OTHER, month = 10, year = 2026
         )
 
-        assertTrue(result.isSuccess, "Repository currently accepts negative expense amounts without validation")
+        assertTrue(result.isFailure)
         val summary = repo.calculateBalanceSheetSummary(month = 10, year = 2026).getOrThrow()
-        assertEquals(-100.0, summary.totalExpenses, absoluteTolerance = 0.001)
+        assertEquals(0.0, summary.totalExpenses, absoluteTolerance = 0.001)
+    }
+
+    @Test
+    fun addExpense_zeroAmount_isRejected() = runTest {
+        val repo = FinancialRepositoryImpl()
+
+        val result = repo.addExpense(
+            title = "Zero", amount = 0.0, category = TransactionCategory.OTHER, month = 10, year = 2026
+        )
+
+        assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun addTransaction_negativeAmount_isRejected() = runTest {
+        val repo = FinancialRepositoryImpl()
+
+        val result = repo.addTransaction(
+            Transaction("TX-NEG", "Bad income", -50.0, TransactionCategory.MEMBERSHIP_FEE, TransactionType.INCOME, "2026-10-01", 2026, 10)
+        )
+
+        assertTrue(result.isFailure)
     }
 
     @Test

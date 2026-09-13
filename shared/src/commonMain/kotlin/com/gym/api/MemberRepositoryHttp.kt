@@ -3,11 +3,21 @@ package com.gym.api
 import com.gym.model.member.Member
 import com.gym.model.member.MemberRepository
 import com.gym.model.member.MemberStatus
+import com.gym.model.member.NewMemberCredentials
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+
+/** Mirrors the server's MemberCreatedResponse shape (see server/.../routes/MemberRoutes.kt). */
+@Serializable
+private data class MemberCreatedResponseDto(
+    val member: Member,
+    val username: String,
+    val temporaryPassword: String
+)
 
 class MemberRepositoryHttp : MemberRepository {
     var authToken: String? = null
@@ -51,7 +61,7 @@ class MemberRepositoryHttp : MemberRepository {
         }
     }
 
-    override suspend fun addMember(member: Member): Result<Unit> = withContext(Dispatchers.Default) {
+    override suspend fun addMember(member: Member): Result<NewMemberCredentials?> = withContext(Dispatchers.Default) {
         try {
             val response = HttpClientProvider.client.post("${HttpClientProvider.BASE_URL}/api/members") {
                 contentType(ContentType.Application.Json)
@@ -59,7 +69,8 @@ class MemberRepositoryHttp : MemberRepository {
                 setBody(member)
             }
             if (response.status.isSuccess()) {
-                Result.success(Unit)
+                val body: MemberCreatedResponseDto = response.body()
+                Result.success(NewMemberCredentials(body.username, body.temporaryPassword))
             } else {
                 Result.failure(Exception("HTTP ${response.status}"))
             }

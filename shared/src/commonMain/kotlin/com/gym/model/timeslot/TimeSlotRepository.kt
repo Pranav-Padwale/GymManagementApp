@@ -100,6 +100,22 @@ class TimeSlotRepositoryImpl : TimeSlotRepository {
     private var nextSlotId = 18
     private var nextAttendanceId = 21
 
+    init {
+        // SLOT-1 fix: currentBookings must always reflect the real attendance ledger, never an
+        // independently-maintained number that can drift from it (seed data previously had the
+        // two disagreeing - e.g. TS-002 showed "24 booked" while only 3 real records existed).
+        recomputeAllBookingCounts()
+    }
+
+    private fun recomputeAllBookingCounts() {
+        slotsDb.indices.forEach { i ->
+            val realCount = attendanceDb.count { it.slotId == slotsDb[i].id }
+            if (slotsDb[i].currentBookings != realCount) {
+                slotsDb[i] = slotsDb[i].copy(currentBookings = realCount)
+            }
+        }
+    }
+
     override suspend fun getAllSlots(): Result<List<TimeSlot>> = withContext(Dispatchers.IO) {
         Result.success(slotsDb.toList())
     }
@@ -209,12 +225,7 @@ class TimeSlotRepositoryImpl : TimeSlotRepository {
                 status = AttendanceStatus.BOOKED
             )
             attendanceDb.add(record)
-
-            // Update slot booking count
-            val slotIndex = slotsDb.indexOfFirst { it.id == slotId }
-            if (slotIndex != -1) {
-                slotsDb[slotIndex] = slotsDb[slotIndex].copy(currentBookings = slotsDb[slotIndex].currentBookings + 1)
-            }
+            recomputeAllBookingCounts()
 
             Result.success(record)
         } catch (e: Exception) {

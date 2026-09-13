@@ -33,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gym.controller.goal.GoalUiState
 import com.gym.model.goal.ActivityLevel
+import com.gym.model.goal.BmiCategory
+import com.gym.model.goal.BmrCalculator
 import com.gym.model.goal.Gender
 import com.gym.model.goal.WeightGoal
 import com.gym.view.theme.*
@@ -300,30 +302,28 @@ fun EditGoalScreen(
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
                             color = theme.textMuted
                         )
+                        val bmiCategory = BmrCalculator.bmiCategory(state.goalResult.bmi)
+                        val bmiCategoryColor = when (bmiCategory) {
+                            BmiCategory.UNDERWEIGHT -> GymAccentPrimary
+                            BmiCategory.NORMAL -> GymAccentSecondary
+                            BmiCategory.OVERWEIGHT -> GymAccentWarning
+                            BmiCategory.OBESE -> GymAccentDanger
+                        }
+                        val bmiCategoryLabel = when (bmiCategory) {
+                            BmiCategory.UNDERWEIGHT -> "Underweight"
+                            BmiCategory.NORMAL -> "Optimal / Normal"
+                            BmiCategory.OVERWEIGHT -> "Overweight"
+                            BmiCategory.OBESE -> "Obese"
+                        }
                         Surface(
-                            color = when {
-                                state.goalResult.bmi < 18.5 -> GymAccentPrimary.copy(alpha = 0.15f)
-                                state.goalResult.bmi < 25.0 -> GymAccentSecondary.copy(alpha = 0.15f)
-                                state.goalResult.bmi < 30.0 -> GymAccentWarning.copy(alpha = 0.15f)
-                                else -> GymAccentDanger.copy(alpha = 0.15f)
-                            },
+                            color = bmiCategoryColor.copy(alpha = 0.15f),
                             shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
-                                text = when {
-                                    state.goalResult.bmi < 18.5 -> "Underweight"
-                                    state.goalResult.bmi < 25.0 -> "Optimal / Normal"
-                                    state.goalResult.bmi < 30.0 -> "Overweight"
-                                    else -> "Obese"
-                                },
+                                text = bmiCategoryLabel,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = when {
-                                    state.goalResult.bmi < 18.5 -> GymAccentPrimary
-                                    state.goalResult.bmi < 25.0 -> GymAccentSecondary
-                                    state.goalResult.bmi < 30.0 -> GymAccentWarning
-                                    else -> GymAccentDanger
-                                },
+                                color = bmiCategoryColor,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                             )
                         }
