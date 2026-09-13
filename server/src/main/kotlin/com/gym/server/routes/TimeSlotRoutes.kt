@@ -7,6 +7,7 @@ import com.gym.server.database.MongoConfig
 import com.gym.server.documents.TimeSlotDocument
 import io.ktor.http.*
 import io.ktor.server.application.*
+import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -19,11 +20,17 @@ fun Route.timeSlotRoutes() {
             val slots = docs.map { it.toSharedModel() }
             call.respond(slots)
         }
+    }
 
-        post {
-            val slot = call.receive<TimeSlot>()
-            MongoConfig.timeSlots.insertOne(slot.toDocument())
-            call.respond(HttpStatusCode.Created, slot)
+    authenticate {
+        route("/api/timeslots") {
+            post {
+                if (!call.requireRole("SUPER_ADMIN", "TRAINER")) return@post
+
+                val slot = call.receive<TimeSlot>()
+                MongoConfig.timeSlots.insertOne(slot.toDocument())
+                call.respond(HttpStatusCode.Created, slot)
+            }
         }
     }
 }

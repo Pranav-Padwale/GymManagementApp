@@ -3,9 +3,23 @@ package com.gym.model.goal
 import kotlin.math.roundToInt
 
 /**
+ * Standard WHO BMI weight-status classification bands.
+ */
+enum class BmiCategory {
+    UNDERWEIGHT, NORMAL, OVERWEIGHT, OBESE
+}
+
+/**
  * Formula engine for Mifflin-St Jeor Equation (1990) & Harris-Benedict revised calculations.
  */
 object BmrCalculator {
+
+    fun bmiCategory(bmi: Double): BmiCategory = when {
+        bmi < 18.5 -> BmiCategory.UNDERWEIGHT
+        bmi < 25.0 -> BmiCategory.NORMAL
+        bmi < 30.0 -> BmiCategory.OVERWEIGHT
+        else -> BmiCategory.OBESE
+    }
 
     fun calculateBmi(heightCm: Double, weightKg: Double): Double {
         if (heightCm <= 0.0) return 0.0

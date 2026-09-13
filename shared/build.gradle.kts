@@ -55,6 +55,12 @@ kotlin {
                 implementation("androidx.room:room-runtime:2.7.0-alpha01")
             }
         }
+        val commonTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
+            }
+        }
         val desktopMain by getting {
             dependencies {
                 implementation(compose.desktop.currentOs)
