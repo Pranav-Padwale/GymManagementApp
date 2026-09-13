@@ -25,8 +25,13 @@ object MongoConfig {
     lateinit var transactions: MongoCollection<TransactionDocument>
 
     fun init() {
-        val uri = "mongodb+srv://pranavpadwale92_db_user:Pranav10@cluster0.vnrbdf3.mongodb.net/?appName=Cluster0"
-        
+        val uri = System.getenv("MONGODB_URI")
+            ?: error(
+                "MONGODB_URI environment variable is not set. Set it to your MongoDB connection " +
+                    "string before starting the server, e.g.:\n" +
+                    "  MONGODB_URI=\"mongodb+srv://<user>:<password>@<cluster>/?appName=Cluster0\" ./gradlew :server:run"
+            )
+
         client = MongoClient.create(uri)
         database = client.getDatabase("gym_db")
 

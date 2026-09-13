@@ -87,4 +87,33 @@ class AuthMatcherTest {
 
         assertEquals(UserRole.SUPER_ADMIN, result?.role)
     }
+
+    // ── AUTH-2: bcrypt-hashed passwordHash values (the post-migration steady state) ──
+
+    @Test
+    fun matchCredentials_bcryptHashedAdminPassword_correctPassword_succeeds() {
+        val hashedAdmin = admin.copy(passwordHash = PasswordHasher.hash("admin123"))
+
+        val result = matchCredentials(LoginRequest("admin", "admin123"), hashedAdmin, null, null)
+
+        assertEquals(UserRole.SUPER_ADMIN, result?.role)
+    }
+
+    @Test
+    fun matchCredentials_bcryptHashedPassword_wrongCandidate_fails() {
+        val hashedAdmin = admin.copy(passwordHash = PasswordHasher.hash("admin123"))
+
+        val result = matchCredentials(LoginRequest("admin", "not-the-password"), hashedAdmin, null, null)
+
+        assertNull(result)
+    }
+
+    @Test
+    fun matchCredentials_bcryptHashedMemberPassword_correctPassword_succeeds() {
+        val hashedMember = member.copy(passwordHash = PasswordHasher.hash("alexpw"))
+
+        val result = matchCredentials(LoginRequest("alex", "alexpw"), null, null, hashedMember)
+
+        assertEquals(UserRole.MEMBER, result?.role)
+    }
 }

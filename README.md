@@ -105,6 +105,9 @@ gym_management_app/
 - **Java Development Kit (JDK)**: JDK 17 or JDK 21
 - **IDE**: Android Studio (Jellyfish/Koala+), IntelliJ IDEA (2024.1+), or Fleet
 - **Gradle**: 8.x / 9.x (Wrapper included)
+- **MongoDB connection string**: the `:server` module requires a `MONGODB_URI` environment
+  variable (a `mongodb+srv://...` connection string) — it will refuse to start without one.
+  Never commit a real connection string to source control.
 
 ---
 
@@ -126,6 +129,11 @@ gym_management_app/
 3. Execute the desktop runner task:
    ```powershell
    gradle :desktopApp:run
+   ```
+4. To run the backend server, first set `MONGODB_URI` for that shell session, then run it:
+   ```powershell
+   $env:MONGODB_URI = "mongodb+srv://<user>:<password>@<cluster>/?appName=Cluster0"
+   gradle :server:run
    ```
 
 ---

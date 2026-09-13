@@ -27,13 +27,13 @@ fun matchCredentials(
     trainer: TrainerDocument?,
     member: MemberDocument?
 ): AuthenticatedUser? {
-    if (admin != null && admin.passwordHash == request.passwordHash) {
+    if (admin != null && PasswordHasher.verify(request.passwordHash, admin.passwordHash)) {
         return AuthenticatedUser(admin.username, admin.role, UserRole.SUPER_ADMIN)
     }
-    if (trainer != null && trainer.passwordHash == request.passwordHash) {
+    if (trainer != null && PasswordHasher.verify(request.passwordHash, trainer.passwordHash)) {
         return AuthenticatedUser(trainer.username, trainer.role, UserRole.TRAINER)
     }
-    if (member != null && member.passwordHash == request.passwordHash) {
+    if (member != null && PasswordHasher.verify(request.passwordHash, member.passwordHash)) {
         return AuthenticatedUser(member.fullName.ifBlank { member.username }, "MEMBER", UserRole.MEMBER)
     }
     return null
