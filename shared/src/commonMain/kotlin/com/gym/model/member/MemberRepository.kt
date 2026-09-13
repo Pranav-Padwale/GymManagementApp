@@ -64,13 +64,17 @@ class MemberRepositoryImpl(
         try {
             if (memberDao != null) {
                 memberDao.updateMemberStatus(memberId, newStatus.name)
+                Result.success(Unit)
+            } else {
+                // Update in-memory cache as well
+                val index = mockDb.indexOfFirst { it.id == memberId }
+                if (index != -1) {
+                    mockDb[index] = mockDb[index].copy(status = newStatus)
+                    Result.success(Unit)
+                } else {
+                    Result.failure(NoSuchElementException("No member found with id: $memberId"))
+                }
             }
-            // Update in-memory cache as well
-            val index = mockDb.indexOfFirst { it.id == memberId }
-            if (index != -1) {
-                mockDb[index] = mockDb[index].copy(status = newStatus)
-            }
-            Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }

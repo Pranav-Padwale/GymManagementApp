@@ -55,6 +55,7 @@ class MemberRepositoryHttp : MemberRepository {
         try {
             val response = HttpClientProvider.client.post("${HttpClientProvider.BASE_URL}/api/members") {
                 contentType(ContentType.Application.Json)
+                authToken?.let { header("Authorization", "Bearer $it") }
                 setBody(member)
             }
             if (response.status.isSuccess()) {
