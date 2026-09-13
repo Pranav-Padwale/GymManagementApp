@@ -5,12 +5,19 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 
 /**
+ * The login credentials issued for a newly created member, if the backing repository
+ * provisions any (the HTTP-backed repository does; the in-memory one does not, and
+ * returns null instead). Only ever available once, right after creation.
+ */
+data class NewMemberCredentials(val username: String, val temporaryPassword: String)
+
+/**
  * Model Layer: MemberRepository Contract
  */
 interface MemberRepository {
     suspend fun getMembers(statusFilter: MemberStatus?): Result<List<Member>>
     suspend fun updateMemberStatus(memberId: String, newStatus: MemberStatus): Result<Unit>
-    suspend fun addMember(member: Member): Result<Unit>
+    suspend fun addMember(member: Member): Result<NewMemberCredentials?>
 }
 
 /**
@@ -80,13 +87,13 @@ class MemberRepositoryImpl(
         }
     }
 
-    override suspend fun addMember(member: Member): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun addMember(member: Member): Result<NewMemberCredentials?> = withContext(Dispatchers.IO) {
         try {
             if (memberDao != null) {
                 memberDao.insertOrUpdateMember(MemberEntity.fromDomain(member))
             }
             mockDb.add(member)
-            Result.success(Unit)
+            Result.success(null)
         } catch (e: Exception) {
             Result.failure(e)
         }

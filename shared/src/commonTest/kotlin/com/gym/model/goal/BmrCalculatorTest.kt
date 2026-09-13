@@ -182,21 +182,39 @@ class BmrCalculatorTest {
     }
 
     // ── Extreme / invalid input edge cases ───────────────────────────
-    // NOTE: these document CURRENT behavior. See QA report "GOAL-1": GAIN/MAINTAIN
-    // have no lower-bound floor (unlike LOSE/LOSE_KETO's coerceAtLeast(1200.0)), so
-    // pathological inputs can legitimately produce negative "calculated calories".
+    // GOAL-1 fix: every WeightGoal branch is now floored at 1200 kcal/day, so pathological
+    // biometric inputs can no longer produce negative (or unsafely low) calorie targets.
 
     @Test
-    fun calculateGoalMetrics_extremeAgeWithZeroWeight_currentlyProducesNegativeCalories_documentsMissingFloor() {
-        // BMR = 10*0 + 6.25*100 - 5*150 + 5 = -120; TDEE(sedentary x1.2) = -144; MAINTAIN keeps it.
+    fun calculateGoalMetrics_extremeAgeWithZeroWeight_maintainGoal_isFlooredNotNegative() {
+        // Regression test for GOAL-1: BMR = 10*0 + 6.25*100 - 5*150 + 5 = -120; TDEE(sedentary
+        // x1.2) = -144. Before the fix, MAINTAIN had no floor and this went negative.
         val result = BmrCalculator.calculateGoalMetrics(
             gender = Gender.MALE, age = 150.0, heightCm = 100.0, weightKg = 0.0,
             goalWeightKg = 70.0, weightGoal = WeightGoal.MAINTAIN, activityLevel = ActivityLevel.SEDENTARY
         )
-        // Documents the gap rather than asserting it's "correct": these are pathological
-        // biometric inputs, but the calculator has no input validation guarding against them,
-        // and only LOSE/LOSE_KETO have a 1200-calorie floor - MAINTAIN and GAIN have none.
-        assertTrue(result.calculatedCalories < 0.0, "Expected the unguarded MAINTAIN path to go negative for this pathological input; got ${result.calculatedCalories}")
+        assertEquals(1200.0, result.calculatedCalories, absoluteTolerance = 0.01)
+    }
+
+    @Test
+    fun calculateGoalMetrics_extremeAgeWithZeroWeight_gainGoal_isFlooredNotNegative() {
+        // Regression test for GOAL-1: GAIN previously added +300 with no floor, so an
+        // extreme-enough negative TDEE could still produce a negative result.
+        val result = BmrCalculator.calculateGoalMetrics(
+            gender = Gender.MALE, age = 150.0, heightCm = 100.0, weightKg = 0.0,
+            goalWeightKg = 70.0, weightGoal = WeightGoal.GAIN, activityLevel = ActivityLevel.SEDENTARY
+        )
+        assertEquals(1200.0, result.calculatedCalories, absoluteTolerance = 0.01)
+    }
+
+    @Test
+    fun calculateGoalMetrics_normalInputs_maintainGoal_isUnaffectedByTheNewFloor() {
+        // The floor must not clip perfectly ordinary, realistic results.
+        val result = BmrCalculator.calculateGoalMetrics(
+            gender = Gender.FEMALE, age = 26.0, heightCm = 172.0, weightKg = 69.0,
+            goalWeightKg = 65.0, weightGoal = WeightGoal.MAINTAIN, activityLevel = ActivityLevel.MODERATELY
+        )
+        assertEquals(2284.7, result.calculatedCalories, absoluteTolerance = 0.01)
     }
 
     @Test

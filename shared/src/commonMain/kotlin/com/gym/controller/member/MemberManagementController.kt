@@ -70,7 +70,8 @@ class MemberManagementController(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             val result = repository.addMember(member)
             result.fold(
-                onSuccess = {
+                onSuccess = { credentials ->
+                    _uiState.update { it.copy(newMemberCredentials = credentials) }
                     fetchMembersForFilter(_uiState.value.selectedFilter)
                 },
                 onFailure = { error ->
@@ -83,6 +84,14 @@ class MemberManagementController(
                 }
             )
         }
+    }
+
+    /**
+     * User action handler: Dismiss the "new member credentials" dialog after the admin
+     * has noted the temporary password down (it is never retrievable again after this).
+     */
+    fun onDismissNewMemberCredentials() {
+        _uiState.update { it.copy(newMemberCredentials = null) }
     }
 
     /**

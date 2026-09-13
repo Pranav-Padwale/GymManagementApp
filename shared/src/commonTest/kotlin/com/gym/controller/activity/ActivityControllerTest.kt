@@ -10,6 +10,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -30,6 +31,7 @@ private class FakeActivityRepository : ActivityRepository {
         if (shouldFail) Result.failure(Exception("simulated timeout")) else Result.success(permissionGranted)
 
     override suspend fun setHealthPermissionGranted(granted: Boolean): Result<Unit> {
+        if (shouldFail) return Result.failure(Exception("simulated permission write failure"))
         permissionGranted = granted
         return Result.success(Unit)
     }
@@ -59,12 +61,10 @@ class ActivityControllerTest {
     }
 
     @Test
-    fun refreshActivityData_repositoryFailure_doesNotSurfaceAnyErrorMessage_documentsSwallowedErrorGap() = runTest {
-        // NOTE (see QA report "ACT-1"): unlike FinanceController/MemberManagementController,
-        // ActivityController never sets errorMessage on failure - every repository call result
-        // is unwrapped with getOrDefault(...) and failures are silently discarded. This test
-        // documents that CURRENT behavior (isLoading still clears, but errorMessage stays null
-        // and the UI has no way to tell the user their data may be stale/wrong).
+    fun refreshActivityData_repositoryFailure_surfacesErrorMessage() = runTest {
+        // Regression test for ACT-1: unlike FinanceController/MemberManagementController,
+        // ActivityController used to never set errorMessage on failure - every repository call
+        // result was unwrapped with getOrDefault(...) and failures were silently discarded.
         val repo = FakeActivityRepository().apply { shouldFail = true }
         val controller = newController(repo)
 
@@ -72,7 +72,40 @@ class ActivityControllerTest {
 
         val state = controller.uiState.value
         assertTrue(!state.isLoading)
-        assertNull(state.errorMessage, "Documents that ActivityController currently swallows repository failures silently")
+        assertNotNull(state.errorMessage)
+        assertTrue(state.errorMessage!!.contains("simulated timeout"))
+    }
+
+    @Test
+    fun refreshActivityData_success_clearsAnyPriorErrorMessage() = runTest {
+        val repo = FakeActivityRepository().apply { shouldFail = true }
+        val controller = newController(repo)
+        assertNotNull(controller.uiState.value.errorMessage)
+
+        repo.shouldFail = false
+        controller.refreshActivityData()
+
+        assertNull(controller.uiState.value.errorMessage)
+    }
+
+    @Test
+    fun onCalendarDateSelected_repositoryFailure_surfacesErrorMessage() = runTest {
+        val repo = FakeActivityRepository().apply { shouldFail = true }
+        val controller = newController(repo)
+
+        controller.onCalendarDateSelected(day = 10, month = 7, year = 2026)
+
+        assertNotNull(controller.uiState.value.errorMessage)
+    }
+
+    @Test
+    fun onGraphTimeRangeChanged_repositoryFailure_surfacesErrorMessage() = runTest {
+        val repo = FakeActivityRepository().apply { shouldFail = true }
+        val controller = newController(repo)
+
+        controller.onGraphTimeRangeChanged(TimeRange.DAYS_30)
+
+        assertNotNull(controller.uiState.value.errorMessage)
     }
 
     @Test
@@ -82,6 +115,19 @@ class ActivityControllerTest {
         controller.onGrantHealthPermission()
 
         assertTrue(controller.uiState.value.isHealthPermissionGranted)
+    }
+
+    @Test
+    fun onGrantHealthPermission_repositoryFailure_surfacesErrorMessageInsteadOfSilentlyIgnoringIt() = runTest {
+        val repo = FakeActivityRepository().apply { shouldFail = true }
+        val controller = newController(repo)
+
+        controller.onGrantHealthPermission()
+
+        val state = controller.uiState.value
+        assertTrue(!state.isLoading)
+        assertNotNull(state.errorMessage)
+        assertTrue(!state.isHealthPermissionGranted)
     }
 
     @Test
